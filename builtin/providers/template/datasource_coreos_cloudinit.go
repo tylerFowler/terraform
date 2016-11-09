@@ -1,5 +1,10 @@
 package template
 
+// TODO:
+// - add `users` section schema def
+// - write render fn
+// - add options for gzipping & encoding in base64
+
 import (
 	"fmt"
 
@@ -9,8 +14,6 @@ import (
 func dataSourceCoreOSCloudinit() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourceCoreOSCloudinitRead,
-
-		// TODO: add users section
 		Schema: map[string]*schema.Schema{
 			"use_shebang": &schema.Schema{
 				Description: "Whether or not to use the shebang (`#` vs `#!`) in the #cloud-config directive",
@@ -40,6 +43,11 @@ func dataSourceCoreOSCloudinit() *schema.Resource {
 			"update":       updateSchema,
 			"systemd_unit": systemdUnitSchema,
 			"write_file":   writeFileSchema,
+			"rendered": &schema.Schema{
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "rendered cloud-config file",
+			},
 		},
 	}
 }
@@ -47,20 +55,6 @@ func dataSourceCoreOSCloudinit() *schema.Resource {
 func dataSourceCoreOSCloudinitRead(dat *schema.ResourceData, meta interface{}) error {
 	// TODO: implement
 	return nil
-}
-
-// Validation functions
-
-// etcHostsValidation runs validation on the cloud-config's `manage_etc_hosts` key,
-// currently CoreOS only supports a value of "localhost", so throw a warning when any other
-// value is given
-func etcHostsValidation(val interface{}, key string) (warnings []string, _ []error) {
-	value := val.(string)
-	if value != "localhost" {
-		warnings = append(warnings, "Manage etc hosts currently only supports values of 'localhost' in CoreOS")
-	}
-
-	return
 }
 
 // CoreOS Key schemas
@@ -192,6 +186,7 @@ var updateSchema = &schema.Schema{
 	},
 }
 
+// systemdUnitSchema maps to the coreos: unit key
 var systemdUnitSchema = &schema.Schema{
 	Type:     schema.TypeList,
 	Optional: true,
@@ -217,6 +212,7 @@ var systemdUnitSchema = &schema.Schema{
 	},
 }
 
+// writeFileSchema maps to the write_files: key
 var writeFileSchema = &schema.Schema{
 	Type:     schema.TypeList,
 	Optional: true,
@@ -229,4 +225,18 @@ var writeFileSchema = &schema.Schema{
 			"encoding":    &schema.Schema{Type: schema.TypeString, Optional: true},
 		},
 	},
+}
+
+// Validation functions
+
+// etcHostsValidation runs validation on the cloud-config's `manage_etc_hosts` key,
+// currently CoreOS only supports a value of "localhost", so throw a warning when any other
+// value is given
+func etcHostsValidation(val interface{}, key string) (warnings []string, _ []error) {
+	value := val.(string)
+	if value != "localhost" {
+		warnings = append(warnings, "Manage etc hosts currently only supports values of 'localhost' in CoreOS")
+	}
+
+	return
 }
