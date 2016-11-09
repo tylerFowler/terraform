@@ -10,7 +10,7 @@ func dataSourceCoreOSCloudinit() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourceCoreOSCloudinitRead,
 
-		// TODO: add users, write-files sections
+		// TODO: add users section
 		Schema: map[string]*schema.Schema{
 			"use_shebang": &schema.Schema{
 				Description: "Whether or not to use the shebang (`#` vs `#!`) in the #cloud-config directive",
@@ -32,7 +32,14 @@ func dataSourceCoreOSCloudinit() *schema.Resource {
 				Optional:     true,
 				ValidateFunc: etcHostsValidation,
 			},
-			"etcd": etcdSchema,
+			"etcd":         etcdSchema,
+			"etcd2":        etcd2Schema,
+			"fleet":        fleetSchema,
+			"flannel":      flannelSchema,
+			"locksmith":    locksmithSchema,
+			"update":       updateSchema,
+			"systemd_unit": systemdUnitSchema,
+			"write_file":   writeFileSchema,
 		},
 	}
 }
@@ -181,6 +188,45 @@ var updateSchema = &schema.Schema{
 			},
 			"server": &schema.Schema{Type: schema.TypeString, Optional: true},
 			"group":  &schema.Schema{Type: schema.TypeString, Optional: true},
+		},
+	},
+}
+
+var systemdUnitSchema = &schema.Schema{
+	Type:     schema.TypeList,
+	Optional: true,
+	Elem: &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name":    &schema.Schema{Type: schema.TypeString, Required: true},
+			"content": &schema.Schema{Type: schema.TypeString, Required: true},
+			"runtime": &schema.Schema{Type: schema.TypeBool, Optional: true},
+			"enable":  &schema.Schema{Type: schema.TypeBool, Optional: true},
+			"command": &schema.Schema{Type: schema.TypeString, Optional: true},
+			"mask":    &schema.Schema{Type: schema.TypeBool, Optional: true},
+			"dropin": &schema.Schema{ // TODO: can we nest maps like this?
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name":    &schema.Schema{Type: schema.TypeString, Required: true},
+						"content": &schema.Schema{Type: schema.TypeString, Required: true},
+					},
+				},
+			},
+		},
+	},
+}
+
+var writeFileSchema = &schema.Schema{
+	Type:     schema.TypeList,
+	Optional: true,
+	Elem: &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"path":        &schema.Schema{Type: schema.TypeString, Required: true},
+			"content":     &schema.Schema{Type: schema.TypeString, Required: true},
+			"permissions": &schema.Schema{Type: schema.TypeString, Optional: true},
+			"owner":       &schema.Schema{Type: schema.TypeString, Optional: true},
+			"encoding":    &schema.Schema{Type: schema.TypeString, Optional: true},
 		},
 	},
 }
