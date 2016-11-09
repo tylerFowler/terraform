@@ -13,6 +13,12 @@ import (
 	"github.com/hashicorp/terraform/config"
 )
 
+func TestInterpolater_simpleVar(t *testing.T) {
+	i := &Interpolater{}
+	scope := &InterpolationScope{}
+	testInterpolateErr(t, i, scope, "simple")
+}
+
 func TestInterpolater_countIndex(t *testing.T) {
 	i := &Interpolater{}
 
@@ -300,7 +306,7 @@ func TestInterpolater_resourceVariableMissingDuringInput(t *testing.T) {
 
 		testInterpolate(t, i, scope, "aws_instance.web.foo", ast.Variable{
 			Value: config.UnknownVariableValue,
-			Type:  ast.TypeString,
+			Type:  ast.TypeUnknown,
 		})
 	}
 
@@ -354,7 +360,7 @@ func TestInterpolater_resourceVariableMulti(t *testing.T) {
 
 	testInterpolate(t, i, scope, "aws_instance.web.*.foo", ast.Variable{
 		Value: config.UnknownVariableValue,
-		Type:  ast.TypeString,
+		Type:  ast.TypeUnknown,
 	})
 }
 
@@ -559,7 +565,7 @@ func TestInterpolator_resourceMultiAttributesComputed(t *testing.T) {
 
 	testInterpolate(t, i, scope, "aws_route53_zone.yada.name_servers", ast.Variable{
 		Value: config.UnknownVariableValue,
-		Type:  ast.TypeString,
+		Type:  ast.TypeUnknown,
 	})
 }
 

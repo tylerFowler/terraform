@@ -92,6 +92,7 @@ type Context struct {
 	parallelSem         Semaphore
 	providerInputConfig map[string]map[string]interface{}
 	runCh               <-chan struct{}
+	stopCh              chan struct{}
 	shadowErr           error
 }
 
@@ -487,28 +488,79 @@ func (c *Context) Plan() (*Plan, error) {
 	c.diffLock.Unlock()
 
 	// Used throughout below
+	X_newApply := experiment.Enabled(experiment.X_newApply)
 	X_newDestroy := experiment.Enabled(experiment.X_newDestroy)
+	newGraphEnabled := (c.destroy && X_newDestroy) || (!c.destroy && X_newApply)
 
-	// Build the graph. We have a branch here since for the pure-destroy
-	// plan (c.destroy) we use a much simpler graph builder that simply
-	// walks the state and reverses edges.
-	var graph *Graph
-	var err error
-	if c.destroy && X_newDestroy {
-		graph, err = (&DestroyPlanGraphBuilder{
-			Module:  c.module,
-			State:   c.state,
-			Targets: c.targets,
-		}).Build(RootModulePath)
-	} else {
-		graph, err = c.Graph(&ContextGraphOpts{Validate: true})
+	// Build the original graph. This is before the new graph builders
+	// coming in 0.8. We do this for shadow graphing.
+	oldGraph, err := c.Graph(&ContextGraphOpts{Validate: true})
+	if err != nil && newGraphEnabled {
+		// If we had an error graphing but we're using the new graph,
+		// just set it to nil and let it go. There are some features that
+		// may work with the new graph that don't with the old.
+		oldGraph = nil
+		err = nil
 	}
 	if err != nil {
 		return nil, err
 	}
 
+	// Build the new graph. We do this no matter wht so we can shadow it.
+	var newGraph *Graph
+	err = nil
+	if c.destroy {
+		newGraph, err = (&DestroyPlanGraphBuilder{
+			Module:  c.module,
+			State:   c.state,
+			Targets: c.targets,
+		}).Build(RootModulePath)
+	} else {
+		newGraph, err = (&PlanGraphBuilder{
+			Module:    c.module,
+			State:     c.state,
+			Providers: c.components.ResourceProviders(),
+			Targets:   c.targets,
+		}).Build(RootModulePath)
+	}
+	if err != nil && !newGraphEnabled {
+		// If we had an error graphing but we're not using this graph, just
+		// set it to nil and record it as a shadow error.
+		c.shadowErr = multierror.Append(c.shadowErr, fmt.Errorf(
+			"Error building new graph: %s", err))
+
+		newGraph = nil
+		err = nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine what is the real and what is the shadow. The logic here
+	// is straightforward though the if statements are not:
+	//
+	//  * If the new graph, shadow with experiment in both because the
+	//    experiment has less nodes so the original can't shadow.
+	//  * If not the new graph, shadow with the experiment
+	//
+	real := oldGraph
+	shadow := newGraph
+	if newGraphEnabled {
+		log.Printf("[WARN] terraform: real graph is experiment, shadow is experiment")
+		real = shadow
+	} else {
+		log.Printf("[WARN] terraform: real graph is original, shadow is experiment")
+	}
+
+	// Special case here: if we're using destroy don't shadow it because
+	// the new destroy graph behaves a bit differently on purpose by not
+	// setting the module destroy flag.
+	if c.destroy && !newGraphEnabled {
+		shadow = nil
+	}
+
 	// Do the walk
-	walker, err := c.walk(graph, graph, operation)
+	walker, err := c.walk(real, shadow, operation)
 	if err != nil {
 		return nil, err
 	}
@@ -527,7 +579,7 @@ func (c *Context) Plan() (*Plan, error) {
 
 	// We don't do the reverification during the new destroy plan because
 	// it will use a different apply process.
-	if !(c.destroy && X_newDestroy) {
+	if !newGraphEnabled {
 		// Now that we have a diff, we can build the exact graph that Apply will use
 		// and catch any possible cycles during the Plan phase.
 		if _, err := c.Graph(&ContextGraphOpts{Validate: true}); err != nil {
@@ -587,6 +639,9 @@ func (c *Context) Stop() {
 
 	// Tell the hook we want to stop
 	c.sh.Stop()
+
+	// Close the stop channel
+	close(c.stopCh)
 
 	// Wait for us to stop
 	c.l.Unlock()
@@ -675,6 +730,9 @@ func (c *Context) acquireRun(phase string) chan<- struct{} {
 	ch := make(chan struct{})
 	c.runCh = ch
 
+	// Reset the stop channel so we can watch that
+	c.stopCh = make(chan struct{})
+
 	// Reset the stop hook so we're not stopped
 	c.sh.Reset()
 
@@ -695,6 +753,7 @@ func (c *Context) releaseRun(ch chan<- struct{}) {
 
 	close(ch)
 	c.runCh = nil
+	c.stopCh = nil
 }
 
 func (c *Context) walk(
@@ -732,8 +791,15 @@ func (c *Context) walk(
 		DebugGraph: dg,
 	}
 
+	// Watch for a stop so we can call the provider Stop() API.
+	doneCh := make(chan struct{})
+	go c.watchStop(walker, c.stopCh, doneCh)
+
 	// Walk the real graph, this will block until it completes
 	realErr := graph.Walk(walker)
+
+	// Close the done channel so the watcher stops
+	close(doneCh)
 
 	// If we have a shadow graph and we interrupted the real graph, then
 	// we just close the shadow and never verify it. It is non-trivial to
@@ -799,7 +865,12 @@ func (c *Context) walk(
 		//
 		// This must be done BEFORE appending shadowWalkErr since the
 		// shadowWalkErr may include expected errors.
-		if c.shadowErr != nil && contextFailOnShadowError {
+		//
+		// We only do this if we don't have a real error. In the case of
+		// a real error, we can't guarantee what nodes were and weren't
+		// traversed in parallel scenarios so we can't guarantee no
+		// shadow errors.
+		if c.shadowErr != nil && contextFailOnShadowError && realErr == nil {
 			panic(multierror.Prefix(c.shadowErr, "shadow graph:"))
 		}
 
@@ -822,6 +893,35 @@ func (c *Context) walk(
 	}
 
 	return walker, realErr
+}
+
+func (c *Context) watchStop(walker *ContextGraphWalker, stopCh, doneCh <-chan struct{}) {
+	// Wait for a stop or completion
+	select {
+	case <-stopCh:
+		// Stop was triggered. Fall out of the select
+	case <-doneCh:
+		// Done, just exit completely
+		return
+	}
+
+	// If we're here, we're stopped, trigger the call.
+
+	// Copy the providers so that a misbehaved blocking Stop doesn't
+	// completely hang Terraform.
+	walker.providerLock.Lock()
+	ps := make([]ResourceProvider, 0, len(walker.providerCache))
+	for _, p := range walker.providerCache {
+		ps = append(ps, p)
+	}
+	defer walker.providerLock.Unlock()
+
+	for _, p := range ps {
+		// We ignore the error for now since there isn't any reasonable
+		// action to take if there is an error here, since the stop is still
+		// advisory: Terraform will exit once the graph node completes.
+		p.Stop()
+	}
 }
 
 // parseVariableAsHCL parses the value of a single variable as would have been specified
