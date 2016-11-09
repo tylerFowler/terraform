@@ -38,7 +38,7 @@ func TestLocksmithRebootStrategy(t *testing.T) {
 		{RebootStrategy: "best-effort", ExpectsError: false},
 		{RebootStrategy: "off", ExpectsError: false},
 		{RebootStrategy: "", ExpectsError: true},
-		{RebootStrategy: "not-a-strategy", ExpectsError: false},
+		{RebootStrategy: "not-a-strategy", ExpectsError: true},
 	}
 
 	for _, tc := range testCases {
