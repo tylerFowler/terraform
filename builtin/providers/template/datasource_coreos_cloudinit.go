@@ -4,6 +4,7 @@ package template
 // - add `users` section schema def
 // - write render fn
 // - add options for gzipping & encoding in base64
+// - fill in remaining options for etcd & etcd2 schemas
 
 import (
 	"fmt"
