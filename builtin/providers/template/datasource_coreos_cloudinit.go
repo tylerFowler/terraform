@@ -8,7 +8,9 @@ package template
 
 import (
 	"fmt"
+	"strconv"
 
+	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -53,9 +55,22 @@ func dataSourceCoreOSCloudinit() *schema.Resource {
 	}
 }
 
-func dataSourceCoreOSCloudinitRead(dat *schema.ResourceData, meta interface{}) error {
-	// TODO: implement
+func dataSourceCoreOSCloudinitRead(data *schema.ResourceData, meta interface{}) error {
+	rendered, err := renderCloudinit(data)
+	if err != nil {
+		return err
+	}
+
+	data.Set("rendered", rendered)
+	data.SetId(strconv.Itoa(hashcode.String(rendered)))
 	return nil
+}
+
+// renderCloudinit finds the various parts of the cloud-config and calls functions to
+// render each one
+func renderCloudinit(data *schema.ResourceData) (string, error) {
+	// TODO: implement
+	return "", nil
 }
 
 // CoreOS Key schemas
