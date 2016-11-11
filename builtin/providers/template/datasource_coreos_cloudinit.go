@@ -330,7 +330,7 @@ var fleetSchema = &schema.Schema{
 			"metadata": &schema.Schema{
 				Type:     schema.TypeList,
 				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeMap}, // TODO: will this allow us to put in arbitrary key/value pairs?
+				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 			"verbosity": &schema.Schema{Type: schema.TypeInt, Optional: true},
 		},
