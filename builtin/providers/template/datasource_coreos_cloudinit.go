@@ -172,7 +172,8 @@ func writeSystemdUnits(buf *bytes.Buffer, data *schema.ResourceData) error {
 		}
 
 		if p, ok := rawUnit["content"]; ok {
-			unit.content = &(p.(string))
+			cntnt := p.(string)
+			unit.content = &cntnt
 		}
 
 		if p, ok := rawUnit["runtime"]; ok {
