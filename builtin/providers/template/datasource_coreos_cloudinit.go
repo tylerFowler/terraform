@@ -7,12 +7,28 @@ package template
 // - fill in remaining options for etcd & etcd2 schemas
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 )
+
+type systemdDropin struct {
+	name    string
+	content *string
+}
+
+type systemdUnit struct {
+	name    string
+	content *string
+	runtime bool
+	enable  bool
+	command string
+	mask    bool
+	dropins []*systemdDropin
+}
 
 func dataSourceCoreOSCloudinit() *schema.Resource {
 	return &schema.Resource{
@@ -38,14 +54,14 @@ func dataSourceCoreOSCloudinit() *schema.Resource {
 				Optional:     true,
 				ValidateFunc: etcHostsValidation,
 			},
-			"etcd":         etcdSchema,
-			"etcd2":        etcd2Schema,
-			"fleet":        fleetSchema,
-			"flannel":      flannelSchema,
-			"locksmith":    locksmithSchema,
-			"update":       updateSchema,
-			"systemd_unit": systemdUnitSchema,
-			"write_file":   writeFileSchema,
+			"update_strategy": updateSchema,
+			"etcd":            etcdSchema,
+			"etcd2":           etcd2Schema,
+			"fleet":           fleetSchema,
+			"flannel":         flannelSchema,
+			"locksmith":       locksmithSchema,
+			"systemd_unit":    systemdUnitSchema,
+			"write_file":      writeFileSchema,
 			"rendered": &schema.Schema{
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -69,8 +85,86 @@ func dataSourceCoreOSCloudinitRead(data *schema.ResourceData, meta interface{}) 
 // renderCloudinit finds the various parts of the cloud-config and calls functions to
 // render each one
 func renderCloudinit(data *schema.ResourceData) (string, error) {
+	var cloudinitBuf bytes.Buffer
+
+	useShebang := data.Get("use_shebang").(bool)
+
+	// write the cloud-config header
+	if useShebang == true {
+		cloudinitBuf.WriteString("#!cloud-config")
+	} else {
+		cloudinitBuf.WriteString("#cloud-config\n")
+	}
+
+	// write the hostname
+	if hostname, hasHostname := data.GetOk("hostname"); hasHostname {
+		cloudinitBuf.WriteString(fmt.Sprintf("hostname: %s\n", hostname.(string)))
+	}
+
+	// write the ssh_authorized_keys
+	if sshAuthKeys, hasSSHKeys := data.GetOk("ssh_authorized_keys"); hasSSHKeys {
+		cloudinitBuf.WriteString("ssh_authorized_keys:\n")
+		for _, sshKey := range sshAuthKeys.([]interface{}) {
+			cloudinitBuf.WriteString(fmt.Sprintf("\t- %s", sshKey.(string)))
+		}
+	}
+
+	// write the manage_etc_hosts entries
+	if etcHosts, hasEtcHosts := data.GetOk("manage_ssh_hosts"); hasEtcHosts {
+		cloudinitBuf.WriteString(fmt.Sprintf("manage_ssh_hosts: %s\n", etcHosts.(string)))
+	}
+
+	// write the coreos bits if applicable
+	writeCoreosValues(&cloudinitBuf, data)
+
+	// write the systemd units
+	// write the write_file directives
+
+	return cloudinitBuf.String(), nil
+}
+
+// writeCoreosValues writes the data at the CoreOS native fields wherever
+// applicable, otherwise it will write nothing to the buffer
+func writeCoreosValues(buffer *bytes.Buffer, data *schema.ResourceData) {
+	// write the coreos key & set indentation level
+	buffer.WriteString("coreos:\n")
+
+	// check for update strategy values
+	if updateStrategy, hasUpdateStrategy := data.GetOk("update_strategy"); hasUpdateStrategy {
+		d := updateStrategy.(map[string]interface{})
+		buffer.WriteString("\tupdate:")
+
+		if rebootStrategy, ok := d["reboot_strategy"]; ok {
+			buffer.WriteString(fmt.Sprintf("\t\treboot_strategy: %s", rebootStrategy))
+		}
+
+		if server, ok := d["server"]; ok {
+			buffer.WriteString(fmt.Sprintf("\t\tserver: %s", server))
+		}
+
+		if group, ok := d["group"]; ok {
+			buffer.WriteString(fmt.Sprintf("\t\tgroup: %s", group))
+		}
+	}
+
+	// check for etcd values
+	// check for etcd2 values
+	// check for fleet values
+	// check for flannel values
+	// check for locksmith values
+}
+
+// writeSystemdUnits extracts all systemd unit directives (coreos.units.*) from the cloud-config data
+// and writes them to the given buffer
+func writeSystemdUnits(buf *bytes.Buffer, data *schema.ResourceData) error {
 	// TODO: implement
-	return "", nil
+	return nil
+}
+
+// writeSystemdUnit appends the given systemd unit definition to the given buffer
+func writeSystemdUnit(buf *bytes.Buffer, unitDef *systemdUnit) error {
+	// TODO: implement
+	return nil
 }
 
 // CoreOS Key schemas
