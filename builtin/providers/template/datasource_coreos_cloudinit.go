@@ -129,6 +129,9 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 	}
 
 	// write the write_file directives
+	if writeErr := writeWriteFiles(&cloudinitBuf, data); writeErr != nil {
+		return "", writeErr
+	}
 
 	return cloudinitBuf.String(), nil
 }
@@ -205,9 +208,6 @@ func writeSystemdUnits(buf *bytes.Buffer, data *schema.ResourceData) error {
 		// TODO: process all dropins & add them the schema
 		unit.dropins = []*systemdDropin{}
 
-		// TODO: if possible we should use the `go` keyword on this
-		// - would have to wrap the buffer into a custom thread-safe type using a mutex
-		// - consider using io.Pipe on buffers as it is thread safe
 		if writeErr := writeSystemdUnit(buf, &unit); writeErr != nil {
 			return writeErr
 		}
@@ -264,6 +264,53 @@ func writeSystemdUnit(buf *bytes.Buffer, unitDef *systemdUnit) error {
 	return nil
 }
 
+// writeWriteFiles appends all write file directives to the cloud-config,
+// if there are any
+func writeWriteFiles(buf *bytes.Buffer, data *schema.ResourceData) error {
+	writeDirectiveKey := func(d string) {
+		buf.WriteString(fmt.Sprintf("\t\t%v\n", d))
+	}
+
+	writeFilesVal, hasWriteFiles := data.GetOk("write_file")
+	if !hasWriteFiles {
+		return nil
+	}
+
+	buf.WriteString("write_files:\n")
+
+	for _, val := range writeFilesVal.([]interface{}) {
+		rawVal := val.(map[string]interface{})
+
+		if p, ok := rawVal["path"]; ok {
+			buf.WriteString(fmt.Sprintf("\t- path: %s", p.(string)))
+		} else { // ensure we always have this initial key
+			return errors.New("`write_file` block must have a path")
+		}
+
+		if p, ok := rawVal["permissions"]; ok {
+			writeDirectiveKey(fmt.Sprintf("permissions: %s", p.(string)))
+		}
+
+		if p, ok := rawVal["owner"]; ok {
+			writeDirectiveKey(fmt.Sprintf("owner: %s", p.(string)))
+		}
+
+		if p, ok := rawVal["encoding"]; ok {
+			writeDirectiveKey(fmt.Sprintf("encoding: %s", p.(string)))
+		}
+
+		if p, ok := rawVal["content"]; ok {
+			cntnt := p.(string)
+			writeDirectiveKey("content: |")
+			buf.WriteString(indentString(3, &cntnt))
+		}
+	}
+
+	return nil
+}
+
+// indentString inserts the given number of tabs in front of every line of the string, returning
+// the indented string
 func indentString(indentLvl int, str *string) string {
 	var buf bytes.Buffer
 	sc := bufio.NewScanner(strings.NewReader(*str))
