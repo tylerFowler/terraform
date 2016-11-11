@@ -118,6 +118,10 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 	writeCoreosValues(&cloudinitBuf, data)
 
 	// write the systemd units
+	if writeErr := writeSystemdUnits(&cloudinitBuf, data); writeErr != nil {
+		return "", writeErr
+	}
+
 	// write the write_file directives
 
 	return cloudinitBuf.String(), nil
