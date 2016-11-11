@@ -7,9 +7,12 @@ package template
 // - fill in remaining options for etcd & etcd2 schemas
 
 import (
+	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -91,7 +94,7 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 
 	// write the cloud-config header
 	if useShebang == true {
-		cloudinitBuf.WriteString("#!cloud-config")
+		cloudinitBuf.WriteString("#!cloud-config\n")
 	} else {
 		cloudinitBuf.WriteString("#cloud-config\n")
 	}
@@ -114,6 +117,9 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 		cloudinitBuf.WriteString(fmt.Sprintf("manage_ssh_hosts: %s\n", etcHosts.(string)))
 	}
 
+	// write the coreos key regardless of whether or not it has values
+	cloudinitBuf.WriteString("coreos:\n")
+
 	// write the coreos bits if applicable
 	writeCoreosValues(&cloudinitBuf, data)
 
@@ -130,9 +136,6 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 // writeCoreosValues writes the data at the CoreOS native fields wherever
 // applicable, otherwise it will write nothing to the buffer
 func writeCoreosValues(buffer *bytes.Buffer, data *schema.ResourceData) {
-	// write the coreos key & set indentation level
-	buffer.WriteString("coreos:\n")
-
 	// check for update strategy values
 	if updateStrategy, hasUpdateStrategy := data.GetOk("update_strategy"); hasUpdateStrategy {
 		d := updateStrategy.(map[string]interface{})
@@ -165,6 +168,9 @@ func writeSystemdUnits(buf *bytes.Buffer, data *schema.ResourceData) error {
 	if !hasUnits {
 		return nil
 	}
+
+	// add the units: (assumes buffer cursor is below the "coreos:" key)
+	buf.WriteString("\tunits:\n")
 
 	// build each systemd unit & send it off to be written to the buffer
 	for _, val := range unitValue.([]interface{}) {
@@ -212,8 +218,50 @@ func writeSystemdUnits(buf *bytes.Buffer, data *schema.ResourceData) error {
 
 // writeSystemdUnit appends the given systemd unit definition to the given buffer
 func writeSystemdUnit(buf *bytes.Buffer, unitDef *systemdUnit) error {
-	// TODO: implement
+	writeUnitKey := func(ln string) {
+		buf.WriteString(fmt.Sprintf("\t\t\t%v\n", ln))
+	}
+
+	if unitDef.name == "" || unitDef.content == nil || *unitDef.content == "" {
+		return errors.New("Systemd units must have both a name and non-empty content")
+	}
+
+	buf.WriteString(fmt.Sprintf("\t\t- name: %s\n", unitDef.name))
+
+	// for the boolean values, they all default in CoreOS to false so only write
+	// the keys if they are true
+	if unitDef.runtime == true {
+		writeUnitKey("runtime: true")
+	}
+
+	if unitDef.mask == true {
+		writeUnitKey("mask: true")
+	}
+
+	if unitDef.enable == true {
+		writeUnitKey("enable: true")
+	}
+
+	if unitDef.command != "" {
+		writeUnitKey(fmt.Sprintf("command: %s", unitDef.command))
+	}
+
+	writeUnitKey("content: |")
+	buf.WriteString(indentString(4, unitDef.content))
+
 	return nil
+}
+
+func indentString(indentLvl int, str *string) string {
+	var buf bytes.Buffer
+	sc := bufio.NewScanner(strings.NewReader(*str))
+	sc.Split(bufio.ScanLines)
+
+	for sc.Scan() {
+		buf.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat("\t", indentLvl), sc.Text()))
+	}
+
+	return buf.String()
 }
 
 // CoreOS Key schemas
