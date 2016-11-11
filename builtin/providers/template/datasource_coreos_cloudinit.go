@@ -155,9 +155,53 @@ func writeCoreosValues(buffer *bytes.Buffer, data *schema.ResourceData) {
 }
 
 // writeSystemdUnits extracts all systemd unit directives (coreos.units.*) from the cloud-config data
-// and writes them to the given buffer
+// and writes them to the given buffer, if there are any
 func writeSystemdUnits(buf *bytes.Buffer, data *schema.ResourceData) error {
-	// TODO: implement
+	unitValue, hasUnits := data.GetOk("systemd_unit")
+	if !hasUnits {
+		return nil
+	}
+
+	// build each systemd unit & send it off to be written to the buffer
+	for _, val := range unitValue.([]interface{}) {
+		rawUnit := val.(map[string]interface{})
+		unit := systemdUnit{}
+
+		if p, ok := rawUnit["name"]; ok {
+			unit.name = p.(string)
+		}
+
+		if p, ok := rawUnit["content"]; ok {
+			unit.content = &(p.(string))
+		}
+
+		if p, ok := rawUnit["runtime"]; ok {
+			unit.runtime = p.(bool)
+		}
+
+		if p, ok := rawUnit["enable"]; ok {
+			unit.enable = p.(bool)
+		}
+
+		if p, ok := rawUnit["command"]; ok {
+			unit.command = p.(string)
+		}
+
+		if p, ok := rawUnit["mask"]; ok {
+			unit.mask = p.(bool)
+		}
+
+		// TODO: process all dropins & add them the schema
+		unit.dropins = []*systemdDropin{}
+
+		// TODO: if possible we should use the `go` keyword on this
+		// - would have to wrap the buffer into a custom thread-safe type using a mutex
+		// - consider using io.Pipe on buffers as it is thread safe
+		if writeErr := writeSystemdUnit(buf, &unit); writeErr == nil {
+			return writeErr
+		}
+	}
+
 	return nil
 }
 
