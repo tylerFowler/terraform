@@ -202,7 +202,7 @@ func writeSystemdUnits(buf *bytes.Buffer, data *schema.ResourceData) error {
 		// TODO: if possible we should use the `go` keyword on this
 		// - would have to wrap the buffer into a custom thread-safe type using a mutex
 		// - consider using io.Pipe on buffers as it is thread safe
-		if writeErr := writeSystemdUnit(buf, &unit); writeErr == nil {
+		if writeErr := writeSystemdUnit(buf, &unit); writeErr != nil {
 			return writeErr
 		}
 	}
