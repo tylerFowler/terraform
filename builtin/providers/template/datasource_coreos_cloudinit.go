@@ -121,7 +121,9 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 	cloudinitBuf.WriteString("coreos:\n")
 
 	// write the coreos bits if applicable
-	writeCoreosValues(&cloudinitBuf, data)
+	if writeErr := writeCoreosValues(&cloudinitBuf, data); writeErr != nil {
+		return "", writeErr
+	}
 
 	// write the systemd units
 	if writeErr := writeSystemdUnits(&cloudinitBuf, data); writeErr != nil {
@@ -138,30 +140,88 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 
 // writeCoreosValues writes the data at the CoreOS native fields wherever
 // applicable, otherwise it will write nothing to the buffer
-func writeCoreosValues(buffer *bytes.Buffer, data *schema.ResourceData) {
-	// check for update strategy values
-	if updateStrategy, hasUpdateStrategy := data.GetOk("update_strategy"); hasUpdateStrategy {
-		d := updateStrategy.(map[string]interface{})
-		buffer.WriteString("\tupdate:")
+func writeCoreosValues(buf *bytes.Buffer, data *schema.ResourceData) error {
+	var err error
 
-		if rebootStrategy, ok := d["reboot_strategy"]; ok {
-			buffer.WriteString(fmt.Sprintf("\t\treboot_strategy: %s", rebootStrategy))
+	if etcdConf, ok := data.GetOk("etcd"); ok {
+		err = writeCoreosDirective(buf, "etcd", etcdConf, etcdSchema)
+	}
+
+	if etcd2Conf, ok := data.GetOk("etcd2"); ok {
+		err = writeCoreosDirective(buf, "etcd2", etcd2Conf, etcd2Schema)
+	}
+
+	if fleetConf, ok := data.GetOk("fleet"); ok {
+		err = writeCoreosDirective(buf, "fleet", fleetConf, fleetSchema)
+	}
+
+	if flannelConf, ok := data.GetOk("flannel"); ok {
+		err = writeCoreosDirective(buf, "flannel", flannelConf, flannelSchema)
+	}
+
+	if locksmithConf, ok := data.GetOk("locksmith"); ok {
+		err = writeCoreosDirective(buf, "locksmith", locksmithConf, locksmithSchema)
+	}
+
+	if updateStrategy, ok := data.GetOk("update_strategy"); ok {
+		err = writeCoreosDirective(buf, "update", updateStrategy, updateSchema)
+	}
+
+	return err
+}
+
+// writeCoreosDirective writes a single coreos.* directive, using `directiveName` as the name,
+// and parsing `vals` and referencing the given schema to figure out how to display
+// it in YAML format
+func writeCoreosDirective(
+	buf *bytes.Buffer, directiveName string, rawVals interface{}, dirSchema *schema.Schema,
+) error {
+	writeKey := func(k string, v string) {
+		buf.WriteString(fmt.Sprintf("\t\t%s: \"%s\"\n", k, v))
+	}
+
+	vals, typeOk := rawVals.(map[string]interface{})
+	if !typeOk {
+		return fmt.Errorf(
+			"Could not write CoreOS directive %s, values %v could not be casted to `map[string]interface{}`",
+			directiveName,
+			vals,
+		)
+	}
+
+	if len(vals) == 0 {
+		return nil
+	}
+
+	buf.WriteString(fmt.Sprintf("\t%s:\n", directiveName))
+	for key, val := range vals {
+		// find the key in the schema
+		keySchema, ok := dirSchema.Elem.(*schema.Resource).Schema[key]
+		if ok == false {
+			return fmt.Errorf("Directive %s unable to get key schema for key %s from %v", directiveName, key, dirSchema)
 		}
 
-		if server, ok := d["server"]; ok {
-			buffer.WriteString(fmt.Sprintf("\t\tserver: %s", server))
-		}
+		// convert the key to the cloud-config format by replacing
+		// underscores (_) with dashes (-)
+		cloudinitKey := strings.Replace(key, "_", "-", -1)
 
-		if group, ok := d["group"]; ok {
-			buffer.WriteString(fmt.Sprintf("\t\tgroup: %s", group))
+		switch keySchema.Type {
+		// strings are simply written as key: strVal
+		case schema.TypeString:
+			writeKey(cloudinitKey, val.(string))
+		// ints are parsed as strings
+		case schema.TypeInt:
+			writeKey(cloudinitKey, fmt.Sprintf("%d", val.(int)))
+		// bools are written as either `true` or `false`
+		case schema.TypeBool:
+			writeKey(cloudinitKey, fmt.Sprintf("%t", val.(bool)))
+		// lists are joined together as comma separated strings
+		case schema.TypeList:
+			writeKey(cloudinitKey, strings.Join(val.([]string), ","))
 		}
 	}
 
-	// check for etcd values
-	// check for etcd2 values
-	// check for fleet values
-	// check for flannel values
-	// check for locksmith values
+	return nil
 }
 
 // writeSystemdUnits extracts all systemd unit directives (coreos.units.*) from the cloud-config data
