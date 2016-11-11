@@ -287,10 +287,10 @@ func (i *Interpolater) valueSimpleVar(
 	// relied on this for their template_file data sources. We should
 	// remove this at some point but there isn't any rush.
 	return fmt.Errorf(
-		"invalid variable syntax: %q. If this is part of inline `template` parameter\n" +
-			"then you must escape the interpolation with two dollar signs. For\n" +
-			"example: ${a} becomes $${a}." +
-			n)
+		"invalid variable syntax: %q. If this is part of inline `template` parameter\n"+
+			"then you must escape the interpolation with two dollar signs. For\n"+
+			"example: ${a} becomes $${a}.",
+		n)
 }
 
 func (i *Interpolater) valueUserVar(
@@ -404,7 +404,8 @@ func (i *Interpolater) computeResourceVariable(
 	}
 
 	if attr, ok := r.Primary.Attributes[v.Field]; ok {
-		return &ast.Variable{Type: ast.TypeString, Value: attr}, nil
+		v, err := hil.InterfaceToVariable(attr)
+		return &v, err
 	}
 
 	// computed list or map attribute
@@ -435,13 +436,15 @@ func (i *Interpolater) computeResourceVariable(
 			// Lists and sets make this
 			key := fmt.Sprintf("%s.#", strings.Join(parts[:i], "."))
 			if attr, ok := r.Primary.Attributes[key]; ok {
-				return &ast.Variable{Type: ast.TypeString, Value: attr}, nil
+				v, err := hil.InterfaceToVariable(attr)
+				return &v, err
 			}
 
 			// Maps make this
 			key = fmt.Sprintf("%s", strings.Join(parts[:i], "."))
 			if attr, ok := r.Primary.Attributes[key]; ok {
-				return &ast.Variable{Type: ast.TypeString, Value: attr}, nil
+				v, err := hil.InterfaceToVariable(attr)
+				return &v, err
 			}
 		}
 	}

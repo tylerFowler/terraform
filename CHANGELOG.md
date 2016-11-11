@@ -18,7 +18,10 @@ BACKWARDS INCOMPATIBILITIES / NOTES:
 
 FEATURES:
 
+ * **New provider:** `nomad` [GH-9538]
  * **New provider:** `vault` [GH-9158]
+ * The `import` command will now read provider configuration from Terraform
+   configuration files (including loading tfvars files and so on). [GH-9809]
  * Providers and resources are now notified by Terraform core to "stop" when
    an interrupt is received, allowing resources to gracefully exit much, much
    faster. [GH-9607]
@@ -32,6 +35,22 @@ BUG FIXES:
 
   * core: Escape sequences in interpolations work in every case. [GH-8709]
   * core: Maps in outputs with computed values are no longer removed. [GH-9549]
+  * command/fmt: Multiline comments aren't indented every fmt. [GH-6524]
+  
+## 0.7.11 (Unreleased)
+
+FEATURES:
+
+IMPROVEMENTS:
+ * provider/aws: Expose RDS DB Instance HostedZoneId attribute [GH-10000]
+ * provider/aws: Ignore AWS internal tags [GH-7454]
+ * provider/azurerm: allow updating load balancer sub-resources [GH-10016]
+ * provider/openstack: Instance `user_data` will now detect if input is already Base64-encode [GH-9966]
+
+BUG FIXES:
+ * provider/aws: fix the validation of aws_redshift_cluster database_name [GH-10019]
+ * provider/aws: Fix panic in aws_acm_certificate datasource [GH-10051]
+
 
 ## 0.7.10 (November 9, 2016)
 
