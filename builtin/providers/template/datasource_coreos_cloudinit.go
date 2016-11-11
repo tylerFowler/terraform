@@ -249,6 +249,18 @@ func writeSystemdUnit(buf *bytes.Buffer, unitDef *systemdUnit) error {
 	writeUnitKey("content: |")
 	buf.WriteString(indentString(4, unitDef.content))
 
+	// write the drop-ins, if any
+	if len(unitDef.dropins) == 0 {
+		return nil
+	}
+
+	writeUnitKey("drop-ins:")
+	for _, dropin := range unitDef.dropins {
+		buf.WriteString(fmt.Sprintf("\t\t\t\t- name: %s\n", dropin.name))
+		buf.WriteString("\t\t\t\t\tcontent: |\n")
+		buf.WriteString(indentString(6, dropin.content))
+	}
+
 	return nil
 }
 
