@@ -51,3 +51,24 @@ func TestLocksmithRebootStrategy(t *testing.T) {
 		}
 	}
 }
+
+// Utility Func Tests
+func TestIndentString(t *testing.T) {
+	testCases := []struct {
+		IndentLvl  int
+		Unindented string
+		Indented   string
+	}{
+		{IndentLvl: 2, Unindented: "some text", Indented: "\t\tsome text\n"},
+		{IndentLvl: 2, Unindented: "some\ntext", Indented: "\t\tsome\n\t\ttext\n"},
+		{IndentLvl: 0, Unindented: "some text", Indented: "some text\n"},
+		{IndentLvl: 4, Unindented: "", Indented: ""},
+	}
+
+	for _, tc := range testCases {
+		indented := indentString(tc.IndentLvl, &tc.Unindented)
+		if indented != tc.Indented {
+			t.Errorf("Expected indented string to be %q but got %q", tc.Indented, indented)
+		}
+	}
+}
