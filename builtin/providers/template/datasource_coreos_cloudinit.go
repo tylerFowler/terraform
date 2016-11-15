@@ -111,7 +111,7 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 	if sshAuthKeys, hasSSHKeys := data.GetOk("ssh_authorized_keys"); hasSSHKeys {
 		cloudinitBuf.WriteString("ssh_authorized_keys:\n")
 		for _, sshKey := range sshAuthKeys.([]interface{}) {
-			cloudinitBuf.WriteString(fmt.Sprintf("\t- %s", sshKey.(string)))
+			cloudinitBuf.WriteString(fmt.Sprintf("\t- %q\n", sshKey.(string)))
 		}
 	}
 
