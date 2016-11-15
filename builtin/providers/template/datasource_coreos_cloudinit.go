@@ -5,6 +5,8 @@ package template
 // - write render fn
 // - add options for gzipping & encoding in base64
 // - fill in remaining options for etcd & etcd2 schemas
+// - consider using schema.ResourceData less so that we can test,
+//   or create a mock for it that implements it's methods
 
 import (
 	"bufio"
@@ -342,7 +344,7 @@ func writeWriteFiles(buf *bytes.Buffer, data *schema.ResourceData) error {
 		rawVal := val.(map[string]interface{})
 
 		if p, ok := rawVal["path"]; ok {
-			buf.WriteString(fmt.Sprintf("\t- path: %s", p.(string)))
+			buf.WriteString(fmt.Sprintf("\t- path: %s\n", p.(string)))
 		} else { // ensure we always have this initial key
 			return errors.New("`write_file` block must have a path")
 		}
