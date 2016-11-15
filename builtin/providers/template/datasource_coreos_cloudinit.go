@@ -344,7 +344,7 @@ func writeWriteFiles(buf *bytes.Buffer, data *schema.ResourceData) error {
 		rawVal := val.(map[string]interface{})
 
 		if p, ok := rawVal["path"]; ok {
-			buf.WriteString(fmt.Sprintf("\t- path: %s\n", p.(string)))
+			buf.WriteString(fmt.Sprintf("\t- path: %q\n", p.(string)))
 		} else { // ensure we always have this initial key
 			return errors.New("`write_file` block must have a path")
 		}
