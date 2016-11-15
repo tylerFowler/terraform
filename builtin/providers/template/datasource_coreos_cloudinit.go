@@ -2,12 +2,8 @@ package template
 
 // TODO:
 // - add `users` section schema def
-// - write render fn
 // - add options for gzipping & encoding in base64
 // - fill in remaining options for etcd & etcd2 schemas
-// - consider using schema.ResourceData less so that we can test,
-//   or create a mock for it that implements it's methods
-// - Systemd unit should *only* require content field if there are no drop ins
 
 import (
 	"bufio"
