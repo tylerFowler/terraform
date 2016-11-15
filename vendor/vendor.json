@@ -314,6 +314,12 @@
 			"revision": "0290933f5e8afd933f2823fce32bf2847e6ea603"
 		},
 		{
+			"checksumSHA1": "B+GonfgNwOAJMEe0WUHQGATRtMA=",
+			"path": "github.com/Microsoft/go-winio",
+			"revision": "562bb09f6612d9a4e91597184709d1cdba95af93",
+			"revisionTime": "2016-11-03T18:56:17Z"
+		},
+		{
 			"checksumSHA1": "O9o5S7D0E1PaN5ARQ72xLfOrIa0=",
 			"path": "github.com/PagerDuty/go-pagerduty",
 			"revision": "f4d5289481b2c05f2b23f81a64dff86aca960962",
@@ -817,6 +823,12 @@
 		{
 			"path": "github.com/cenkalti/backoff",
 			"revision": "4dc77674aceaabba2c7e3da25d4c823edfb73f99"
+		},
+		{
+			"checksumSHA1": "sIaADZAnjqXQLRXec+QvQ6ChlYE=",
+			"path": "github.com/chzyer/readline",
+			"revision": "c914be64f07d9998f52bf0d598ec26d457168c0f",
+			"revisionTime": "2016-11-06T04:23:43Z"
 		},
 		{
 			"checksumSHA1": "L0fG0Aej27fMmhJwshFsqgVY4dM=",
@@ -1412,16 +1424,28 @@
 			"revisionTime": "2016-11-09T22:51:35Z"
 		},
 		{
-			"checksumSHA1": "PjLBj8sicHOz2ZzuaMTPZ09OuFs=",
+			"checksumSHA1": "/TJCBetWCMVsOpehJzVk3S/xtWM=",
 			"path": "github.com/hashicorp/hil",
-			"revision": "a69e0a85dd050184c00f6080fce138f2dadb1a4c",
-			"revisionTime": "2016-11-11T01:09:07Z"
+			"revision": "fceef4715de114b559e042e19fd2cec06003628a",
+			"revisionTime": "2016-11-15T03:45:18Z"
 		},
 		{
-			"checksumSHA1": "FFroNUb6Nn6xUQJMsVDTb4Cqzo4=",
+			"checksumSHA1": "YPJwewz3dAqEWOGP2qIIWeCufF0=",
 			"path": "github.com/hashicorp/hil/ast",
-			"revision": "ce4ab742a9dd2bb6e55050337333b2c56666e5a0",
-			"revisionTime": "2016-10-27T15:25:34Z"
+			"revision": "fceef4715de114b559e042e19fd2cec06003628a",
+			"revisionTime": "2016-11-15T03:45:18Z"
+		},
+		{
+			"checksumSHA1": "BeqAygYXJlCHpU0HVWg4mxuROks=",
+			"path": "github.com/hashicorp/hil/parser",
+			"revision": "fceef4715de114b559e042e19fd2cec06003628a",
+			"revisionTime": "2016-11-15T03:45:18Z"
+		},
+		{
+			"checksumSHA1": "2aIAMbqPrE0qyYoJSL6qjVm+Tt0=",
+			"path": "github.com/hashicorp/hil/scanner",
+			"revision": "fceef4715de114b559e042e19fd2cec06003628a",
+			"revisionTime": "2016-11-15T03:45:18Z"
 		},
 		{
 			"path": "github.com/hashicorp/logutils",
@@ -1898,8 +1922,10 @@
 			"revision": "314aad379a39f6ad5bcca278e6757d9abbb3a52e"
 		},
 		{
+			"checksumSHA1": "wqU8bs9c+xm0f07t6ajQFWYS+rE=",
 			"path": "github.com/mitchellh/panicwrap",
-			"revision": "a1e50bc201f387747a45ffff020f1af2d8759e88"
+			"revision": "168f3680ad986108df63bae07da2978f51c4ac8e",
+			"revisionTime": "2016-11-14T06:37:33Z"
 		},
 		{
 			"path": "github.com/mitchellh/prefixedio",
@@ -2169,6 +2195,12 @@
 		{
 			"path": "golang.org/x/sys/unix",
 			"revision": "5eaf0df67e70d6997a9fe0ed24383fa1b01638d3"
+		},
+		{
+			"checksumSHA1": "fpW2dhGFC6SrVzipJx7fjg2DIH8=",
+			"path": "golang.org/x/sys/windows",
+			"revision": "b699b7032584f0953262cb2788a0ca19bb494703",
+			"revisionTime": "2016-11-10T11:58:56Z"
 		},
 		{
 			"checksumSHA1": "QDbbtubwRml+xdgIfNy/yC6Ff78=",
