@@ -450,6 +450,7 @@ var fleetSchema = &schema.Schema{
 	Optional: true,
 	Elem: &schema.Resource{
 		Schema: map[string]*schema.Schema{
+			"public_ip": &schema.Schema{Type: schema.TypeString, Optional: true},
 			"agent_ttl":                 &schema.Schema{Type: schema.TypeInt, Optional: true},
 			"engine_reconcile_interval": &schema.Schema{Type: schema.TypeInt, Optional: true},
 			"etcd_cafile":               &schema.Schema{Type: schema.TypeString, Optional: true},
