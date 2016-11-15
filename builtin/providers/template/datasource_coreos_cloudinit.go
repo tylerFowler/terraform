@@ -7,6 +7,7 @@ package template
 // - fill in remaining options for etcd & etcd2 schemas
 // - consider using schema.ResourceData less so that we can test,
 //   or create a mock for it that implements it's methods
+// - Systemd unit should *only* require content field if there are no drop ins
 
 import (
 	"bufio"
@@ -137,7 +138,8 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 		return "", writeErr
 	}
 
-	return cloudinitBuf.String(), nil
+	// replace all tabs with soft spaces since YAML doesn't like tabs
+	return strings.Replace(cloudinitBuf.String(), "\t", "  ", -1), nil
 }
 
 // writeCoreosValues writes the data at the CoreOS native fields wherever
@@ -267,8 +269,26 @@ func writeSystemdUnits(buf *bytes.Buffer, data *schema.ResourceData) error {
 			unit.mask = p.(bool)
 		}
 
-		// TODO: process all dropins & add them the schema
 		unit.dropins = []*systemdDropin{}
+		if p, ok := rawUnit["dropin"]; ok {
+			ds := p.([]interface{})
+
+			for _, d := range ds {
+				rawDropin := d.(map[string]interface{})
+				dropin := systemdDropin{}
+
+				if dName, hasName := rawDropin["name"]; hasName {
+					dropin.name = dName.(string)
+				}
+
+				if dContent, hasContent := rawDropin["content"]; hasContent {
+					cntnt := dContent.(string)
+					dropin.content = &cntnt
+				}
+
+				unit.dropins = append(unit.dropins, &dropin)
+			}
+		}
 
 		if writeErr := writeSystemdUnit(buf, &unit); writeErr != nil {
 			return writeErr
@@ -372,14 +392,21 @@ func writeWriteFiles(buf *bytes.Buffer, data *schema.ResourceData) error {
 }
 
 // indentString inserts the given number of tabs in front of every line of the string, returning
-// the indented string
+// the indented string, it will *not* write tabs to blank new lines
 func indentString(indentLvl int, str *string) string {
 	var buf bytes.Buffer
 	sc := bufio.NewScanner(strings.NewReader(*str))
 	sc.Split(bufio.ScanLines)
 
 	for sc.Scan() {
-		buf.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat("\t", indentLvl), sc.Text()))
+		line := sc.Text()
+
+		// if our line consists only of "\n" (in which case the given line is empty) then don't indent it
+		if len(line) == 0 {
+			buf.WriteString("\n")
+		} else {
+			buf.WriteString(fmt.Sprintf("%s%s\n", strings.Repeat("\t", indentLvl), line))
+		}
 	}
 
 	return buf.String()
