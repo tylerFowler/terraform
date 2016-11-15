@@ -116,8 +116,8 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 	}
 
 	// write the manage_etc_hosts entries
-	if etcHosts, hasEtcHosts := data.GetOk("manage_ssh_hosts"); hasEtcHosts {
-		cloudinitBuf.WriteString(fmt.Sprintf("manage_ssh_hosts: %s\n", etcHosts.(string)))
+	if etcHosts, hasEtcHosts := data.GetOk("manage_etc_hosts"); hasEtcHosts {
+		cloudinitBuf.WriteString(fmt.Sprintf("manage_etc_hosts: %s\n", etcHosts.(string)))
 	}
 
 	// write the coreos key regardless of whether or not it has values
