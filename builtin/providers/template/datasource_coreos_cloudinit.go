@@ -328,8 +328,10 @@ func writeSystemdUnit(buf *bytes.Buffer, unitDef *systemdUnit) error {
 		writeUnitKey(fmt.Sprintf("command: %s", unitDef.command))
 	}
 
-	writeUnitKey("content: |")
-	buf.WriteString(indentString(4, unitDef.content))
+	if unitDef.content != nil && *unitDef.content != "" {
+		writeUnitKey("content: |")
+		buf.WriteString(indentString(4, unitDef.content))
+	}
 
 	// write the drop-ins, if any
 	if len(unitDef.dropins) == 0 {
