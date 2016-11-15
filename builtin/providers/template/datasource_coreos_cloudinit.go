@@ -304,8 +304,8 @@ func writeSystemdUnit(buf *bytes.Buffer, unitDef *systemdUnit) error {
 		buf.WriteString(fmt.Sprintf("\t\t\t%v\n", ln))
 	}
 
-	if unitDef.name == "" || unitDef.content == nil || *unitDef.content == "" {
-		return errors.New("Systemd units must have both a name and non-empty content")
+	if unitDef.content == nil || *unitDef.content == "" && len(unitDef.dropins) == 0 {
+		return errors.New("Systemd units without any content must have at least one dropin")
 	}
 
 	buf.WriteString(fmt.Sprintf("\t\t- name: %s\n", unitDef.name))
@@ -548,12 +548,12 @@ var systemdUnitSchema = &schema.Schema{
 	Elem: &schema.Resource{
 		Schema: map[string]*schema.Schema{
 			"name":    &schema.Schema{Type: schema.TypeString, Required: true},
-			"content": &schema.Schema{Type: schema.TypeString, Required: true},
+			"content": &schema.Schema{Type: schema.TypeString, Optional: true}, // required if we have no drop ins
 			"runtime": &schema.Schema{Type: schema.TypeBool, Optional: true},
 			"enable":  &schema.Schema{Type: schema.TypeBool, Optional: true},
 			"command": &schema.Schema{Type: schema.TypeString, Optional: true},
 			"mask":    &schema.Schema{Type: schema.TypeBool, Optional: true},
-			"dropin": &schema.Schema{ // TODO: can we nest maps like this?
+			"dropin": &schema.Schema{
 				Type:     schema.TypeList,
 				Optional: true,
 				Elem: &schema.Resource{
