@@ -135,6 +135,8 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 	}
 
 	// replace all tabs with soft spaces since YAML doesn't like tabs
+	// TODO: eventually want to do this earlier in the process so that we can avoid
+	// changing the content of user scripts and such
 	return strings.Replace(cloudinitBuf.String(), "\t", "  ", -1), nil
 }
 
@@ -177,7 +179,7 @@ func writeCoreosDirective(
 	buf *bytes.Buffer, directiveName string, rawVals interface{}, dirSchema *schema.Schema,
 ) error {
 	writeKey := func(k string, v string) {
-		buf.WriteString(fmt.Sprintf("\t\t%s: \"%s\"\n", k, v))
+		buf.WriteString(fmt.Sprintf("\t\t%s: %s\n", k, v))
 	}
 
 	vals, typeOk := rawVals.(map[string]interface{})
@@ -206,15 +208,12 @@ func writeCoreosDirective(
 		cloudinitKey := strings.Replace(key, "_", "-", -1)
 
 		switch keySchema.Type {
-		// strings are simply written as key: strVal
+		// strings are simply written as key: "strVal"
 		case schema.TypeString:
-			writeKey(cloudinitKey, val.(string))
-		// ints are parsed as strings
+			writeKey(cloudinitKey, fmt.Sprintf("%q", val.(string)))
+		// ints are parsed as strings w/o quotes
 		case schema.TypeInt:
-			writeKey(cloudinitKey, fmt.Sprintf("%d", val.(int)))
-		// bools are written as either `true` or `false`
-		case schema.TypeBool:
-			writeKey(cloudinitKey, fmt.Sprintf("%t", val.(bool)))
+			writeKey(cloudinitKey, fmt.Sprintf("%s", val.(string)))
 		// lists are joined together as comma separated strings
 		case schema.TypeList:
 			writeKey(cloudinitKey, strings.Join(val.([]string), ","))
@@ -450,24 +449,16 @@ var fleetSchema = &schema.Schema{
 	Optional: true,
 	Elem: &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			"public_ip": &schema.Schema{Type: schema.TypeString, Optional: true},
+			"public_ip":                 &schema.Schema{Type: schema.TypeString, Optional: true},
 			"agent_ttl":                 &schema.Schema{Type: schema.TypeInt, Optional: true},
 			"engine_reconcile_interval": &schema.Schema{Type: schema.TypeInt, Optional: true},
 			"etcd_cafile":               &schema.Schema{Type: schema.TypeString, Optional: true},
 			"etcd_certfile":             &schema.Schema{Type: schema.TypeString, Optional: true},
 			"etcd_keyfile":              &schema.Schema{Type: schema.TypeString, Optional: true},
 			"etcd_request_timeout":      &schema.Schema{Type: schema.TypeInt, Optional: true},
-			"etcd_servers": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-			},
-			"metadata": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-			},
-			"verbosity": &schema.Schema{Type: schema.TypeInt, Optional: true},
+			"etcd_servers":              &schema.Schema{Type: schema.TypeString, Optional: true},
+			"metadata":                  &schema.Schema{Type: schema.TypeString, Optional: true},
+			"verbosity":                 &schema.Schema{Type: schema.TypeInt, Optional: true},
 		},
 	},
 }
@@ -478,19 +469,15 @@ var flannelSchema = &schema.Schema{
 	Optional: true,
 	Elem: &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			"etcd_endpoints": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-			},
-			"etcd_cafile":   &schema.Schema{Type: schema.TypeString, Optional: true},
-			"etcd_certfile": &schema.Schema{Type: schema.TypeString, Optional: true},
-			"etcd_keyfile":  &schema.Schema{Type: schema.TypeString, Optional: true},
-			"etcd_prefix":   &schema.Schema{Type: schema.TypeString, Optional: true},
-			"ip_masq":       &schema.Schema{Type: schema.TypeString, Optional: true},
-			"subnet_file":   &schema.Schema{Type: schema.TypeString, Optional: true},
-			"interface":     &schema.Schema{Type: schema.TypeString, Optional: true},
-			"public_ip":     &schema.Schema{Type: schema.TypeString, Optional: true},
+			"etcd_endpoints": &schema.Schema{Type: schema.TypeString, Optional: true},
+			"etcd_cafile":    &schema.Schema{Type: schema.TypeString, Optional: true},
+			"etcd_certfile":  &schema.Schema{Type: schema.TypeString, Optional: true},
+			"etcd_keyfile":   &schema.Schema{Type: schema.TypeString, Optional: true},
+			"etcd_prefix":    &schema.Schema{Type: schema.TypeString, Optional: true},
+			"ip_masq":        &schema.Schema{Type: schema.TypeString, Optional: true},
+			"subnet_file":    &schema.Schema{Type: schema.TypeString, Optional: true},
+			"interface":      &schema.Schema{Type: schema.TypeString, Optional: true},
+			"public_ip":      &schema.Schema{Type: schema.TypeString, Optional: true},
 		},
 	},
 }
@@ -501,11 +488,7 @@ var locksmithSchema = &schema.Schema{
 	Optional: true,
 	Elem: &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			"endpoint": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-			},
+			"endpoint":      &schema.Schema{Type: schema.TypeString, Optional: true},
 			"etcd_cafile":   &schema.Schema{Type: schema.TypeString, Optional: true},
 			"etcd_certfile": &schema.Schema{Type: schema.TypeString, Optional: true},
 			"etcd_keyfile":  &schema.Schema{Type: schema.TypeString, Optional: true},
