@@ -315,8 +315,8 @@ func writeSystemdUnit(buf *bytes.Buffer, unitDef *systemdUnit) error {
 		buf.WriteString(fmt.Sprintf("\t\t\t%v\n", ln))
 	}
 
-	if unitDef.content == nil || *unitDef.content == "" && len(unitDef.dropins) == 0 {
-		return errors.New("Systemd units without any content must have at least one dropin")
+	if unitDef.content == nil || *unitDef.content == "" && len(unitDef.dropins) == 0 && unitDef.command == "" {
+		return errors.New("Systemd units without any content must have at least one dropin or a command")
 	}
 
 	buf.WriteString(fmt.Sprintf("\t\t- name: %s\n", unitDef.name))
