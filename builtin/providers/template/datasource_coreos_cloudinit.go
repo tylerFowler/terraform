@@ -1,9 +1,8 @@
 package template
 
 // TODO:
-// - add `users` section schema def
 // - add options for gzipping & encoding in base64
-// - fill in remaining options for etcd & etcd2 schemas
+// - if `coreos: ` ends up being empty we need to not write it (or write something ineffectual to it)
 
 import (
 	"bufio"
@@ -56,6 +55,7 @@ func dataSourceCoreOSCloudinit() *schema.Resource {
 				Optional:     true,
 				ValidateFunc: etcHostsValidation,
 			},
+			"user":            userSchema,
 			"update_strategy": updateSchema,
 			"etcd":            etcdSchema,
 			"etcd2":           etcd2Schema,
@@ -131,6 +131,10 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 
 	// write the write_file directives
 	if writeErr := writeWriteFiles(&cloudinitBuf, data); writeErr != nil {
+		return "", writeErr
+	}
+
+	if writeErr := writeUsers(&cloudinitBuf, data); writeErr != nil {
 		return "", writeErr
 	}
 
@@ -214,6 +218,9 @@ func writeCoreosDirective(
 		// ints are parsed as strings w/o quotes
 		case schema.TypeInt:
 			writeKey(cloudinitKey, fmt.Sprintf("%s", val.(string)))
+		// bools are written out as true or false
+		case schema.TypeBool:
+			writeKey(cloudinitKey, fmt.Sprintf("%t", val.(bool)))
 		// lists are joined together as comma separated strings
 		case schema.TypeList:
 			writeKey(cloudinitKey, strings.Join(val.([]string), ","))
@@ -360,28 +367,85 @@ func writeWriteFiles(buf *bytes.Buffer, data *schema.ResourceData) error {
 	for _, val := range writeFilesVal.([]interface{}) {
 		rawVal := val.(map[string]interface{})
 
-		if p, ok := rawVal["path"]; ok {
+		if p, ok := rawVal["path"]; ok && p.(string) != "" {
 			buf.WriteString(fmt.Sprintf("\t- path: %q\n", p.(string)))
 		} else { // ensure we always have this initial key
 			return errors.New("`write_file` block must have a path")
 		}
 
-		if p, ok := rawVal["permissions"]; ok {
+		if p, ok := rawVal["permissions"]; ok && p.(string) != "" {
 			writeDirectiveKey(fmt.Sprintf("permissions: %s", p.(string)))
 		}
 
-		if p, ok := rawVal["owner"]; ok {
+		if p, ok := rawVal["owner"]; ok && p.(string) != "" {
 			writeDirectiveKey(fmt.Sprintf("owner: %s", p.(string)))
 		}
 
-		if p, ok := rawVal["encoding"]; ok {
+		if p, ok := rawVal["encoding"]; ok && p.(string) != "" {
 			writeDirectiveKey(fmt.Sprintf("encoding: %s", p.(string)))
 		}
 
-		if p, ok := rawVal["content"]; ok {
+		if p, ok := rawVal["content"]; ok && p.(string) != "" {
 			cntnt := p.(string)
 			writeDirectiveKey("content: |")
 			buf.WriteString(indentString(3, &cntnt))
+		}
+	}
+
+	return nil
+}
+
+func writeUsers(buf *bytes.Buffer, data *schema.ResourceData) error {
+	writeUserKey := func(key string, value string) {
+		buf.WriteString(fmt.Sprintf("\t\t%s: %v\n", key, value))
+	}
+
+	usersVal, hasUsers := data.GetOk("user")
+	if !hasUsers {
+		return nil
+	}
+
+	buf.WriteString("users:\n")
+
+	for _, v := range usersVal.([]interface{}) {
+		rawUser := v.(map[string]interface{})
+
+		// we must always write the name key first
+		buf.WriteString(fmt.Sprintf("\t- name: %q\n", rawUser["name"].(string)))
+
+		for userKey, userVal := range rawUser {
+			if userKey == "name" { // already processed the name key
+				continue
+			}
+
+			keySchema, keyCheckOk := userSchema.Elem.(*schema.Resource).Schema[userKey]
+			if keyCheckOk == false {
+				return fmt.Errorf("User section unable to get key schema for key %s from %v", userKey, userSchema)
+			}
+
+			cloudinitKey := strings.Replace(userKey, "_", "-", -1)
+			switch keySchema.Type {
+			case schema.TypeString:
+				if userVal.(string) != "" {
+					writeUserKey(cloudinitKey, userVal.(string))
+				}
+			// TODO: for some of these boolean values, doing true *or* false will change the behavior,
+			// so we need a way to "unset" boolean values that user did not explicitly specify
+			case schema.TypeBool:
+				if userVal.(bool) != false {
+					writeUserKey(cloudinitKey, fmt.Sprintf("%t", userVal.(bool)))
+				}
+			case schema.TypeList:
+				ls := userVal.([]interface{})
+				if len(ls) == 0 {
+					continue
+				}
+
+				writeUserKey(cloudinitKey, "") // write a blank key line the main list key
+				for _, l := range ls {
+					buf.WriteString(fmt.Sprintf("\t\t\t- %q\n", l.(string)))
+				}
+			}
 		}
 	}
 
@@ -574,6 +638,39 @@ var updateSchema = &schema.Schema{
 			},
 			"server": &schema.Schema{Type: schema.TypeString, Optional: true},
 			"group":  &schema.Schema{Type: schema.TypeString, Optional: true},
+		},
+	},
+}
+
+// userSchema maps to top level user values
+var userSchema = &schema.Schema{
+	Type:     schema.TypeList,
+	Optional: true,
+	Elem: &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name":                           &schema.Schema{Type: schema.TypeString, Required: true},
+			"gecos":                          &schema.Schema{Type: schema.TypeString, Optional: true},
+			"passwd":                         &schema.Schema{Type: schema.TypeString, Optional: true},
+			"homedir":                        &schema.Schema{Type: schema.TypeString, Optional: true},
+			"no_create_home":                 &schema.Schema{Type: schema.TypeBool, Optional: true},
+			"primary_group":                  &schema.Schema{Type: schema.TypeString, Optional: true},
+			"no_user_group":                  &schema.Schema{Type: schema.TypeBool, Optional: true},
+			"coreos_ssh_import_github":       &schema.Schema{Type: schema.TypeString, Optional: true, Deprecated: "Deprecated by CoreOS"},
+			"coreos_ssh_import_github_users": &schema.Schema{Type: schema.TypeString, Optional: true, Deprecated: "Deprecated by CoreOS"},
+			"coreos_ssh_import_url":          &schema.Schema{Type: schema.TypeString, Optional: true, Deprecated: "Deprecated by CoreOS"},
+			"system":                         &schema.Schema{Type: schema.TypeBool, Optional: true},
+			"no_log_init":                    &schema.Schema{Type: schema.TypeBool, Optional: true},
+			"shell":                          &schema.Schema{Type: schema.TypeString, Optional: true},
+			"groups": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+			"ssh_authorized_keys": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
 		},
 	},
 }
