@@ -1,5 +1,7 @@
 package template
 
+// TODO: add a resource like `template_coreos_cloudinit_systemd_unit` that can be linked to a template
+
 import (
 	"bufio"
 	"bytes"
@@ -87,20 +89,16 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 	var cloudinitBuf bytes.Buffer
 
 	useShebang := data.Get("use_shebang").(bool)
-
-	// write the cloud-config header
 	if useShebang == true {
 		cloudinitBuf.WriteString("#!cloud-config\n")
 	} else {
 		cloudinitBuf.WriteString("#cloud-config\n")
 	}
 
-	// write the hostname
 	if hostname, hasHostname := data.GetOk("hostname"); hasHostname {
 		cloudinitBuf.WriteString(fmt.Sprintf("hostname: %s\n", hostname.(string)))
 	}
 
-	// write the ssh_authorized_keys
 	if sshAuthKeys, hasSSHKeys := data.GetOk("ssh_authorized_keys"); hasSSHKeys {
 		cloudinitBuf.WriteString("ssh_authorized_keys:\n")
 		for _, sshKey := range sshAuthKeys.([]interface{}) {
@@ -108,12 +106,12 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 		}
 	}
 
-	// write the manage_etc_hosts entries
 	if etcHosts, hasEtcHosts := data.GetOk("manage_etc_hosts"); hasEtcHosts {
 		cloudinitBuf.WriteString(fmt.Sprintf("manage_etc_hosts: %s\n", etcHosts.(string)))
 	}
 
-	// write the coreos key regardless of whether or not it has values
+	// write the coreos key regardless of whether or not it has values,
+	// if it ends up not having values it'll be removed later
 	cloudinitBuf.WriteString("coreos:\n")
 
 	// write the coreos bits if applicable
@@ -138,7 +136,7 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 	cloudConfig := cloudinitBuf.String()
 
 	// if we've written nothing to the `coreos:` key we need to remove it from the string
-	if matches, _ := regexp.MatchString("coreos:\n\t", cloudConfig); !matches {
+	if hasCoreosBlock, _ := regexp.MatchString("coreos:\n\t", cloudConfig); !hasCoreosBlock {
 		cloudConfig = strings.Replace(cloudConfig, "coreos:\n", "", 1)
 	}
 
@@ -181,7 +179,7 @@ func writeCoreosValues(buf *bytes.Buffer, data *schema.ResourceData) error {
 }
 
 // writeCoreosDirective writes a single coreos.* directive, using `directiveName` as the name,
-// and parsing `vals` and referencing the given schema to figure out how to display
+// parsing `vals` and referencing the given schema to figure out how to display
 // it in YAML format
 func writeCoreosDirective(
 	buf *bytes.Buffer, directiveName string, rawVals interface{}, dirSchema *schema.Schema,
@@ -230,9 +228,6 @@ func writeCoreosDirective(
 			} else if val.(string) == "1" {
 				writeKey(cloudinitKey, "true")
 			}
-		// lists are joined together as comma separated strings
-		case schema.TypeList:
-			writeKey(cloudinitKey, strings.Join(val.([]string), ","))
 		}
 	}
 
@@ -311,8 +306,8 @@ func writeSystemdUnits(buf *bytes.Buffer, data *schema.ResourceData) error {
 
 // writeSystemdUnit appends the given systemd unit definition to the given buffer
 func writeSystemdUnit(buf *bytes.Buffer, unitDef *systemdUnit) error {
-	writeUnitKey := func(ln string) {
-		buf.WriteString(fmt.Sprintf("\t\t\t%v\n", ln))
+	writeUnitKey := func(key string, val string) {
+		buf.WriteString(fmt.Sprintf("\t\t\t%s: %v\n", key, val))
 	}
 
 	if unitDef.content == nil || *unitDef.content == "" && len(unitDef.dropins) == 0 && unitDef.command == "" {
@@ -324,23 +319,23 @@ func writeSystemdUnit(buf *bytes.Buffer, unitDef *systemdUnit) error {
 	// for the boolean values, they all default in CoreOS to false so only write
 	// the keys if they are true
 	if unitDef.runtime == true {
-		writeUnitKey("runtime: true")
+		writeUnitKey("runtime", "true")
 	}
 
 	if unitDef.mask == true {
-		writeUnitKey("mask: true")
+		writeUnitKey("mask", "true")
 	}
 
 	if unitDef.enable == true {
-		writeUnitKey("enable: true")
+		writeUnitKey("enable", "true")
 	}
 
 	if unitDef.command != "" {
-		writeUnitKey(fmt.Sprintf("command: %s", unitDef.command))
+		writeUnitKey("command", unitDef.command)
 	}
 
 	if unitDef.content != nil && *unitDef.content != "" {
-		writeUnitKey("content: |")
+		writeUnitKey("content", "|")
 		buf.WriteString(indentString(4, unitDef.content))
 	}
 
@@ -349,7 +344,7 @@ func writeSystemdUnit(buf *bytes.Buffer, unitDef *systemdUnit) error {
 		return nil
 	}
 
-	writeUnitKey("drop-ins:")
+	buf.WriteString("\t\t\tdrop-ins:\n")
 	for _, dropin := range unitDef.dropins {
 		buf.WriteString(fmt.Sprintf("\t\t\t\t- name: %s\n", dropin.name))
 		buf.WriteString("\t\t\t\t\tcontent: |\n")
@@ -362,8 +357,8 @@ func writeSystemdUnit(buf *bytes.Buffer, unitDef *systemdUnit) error {
 // writeWriteFiles appends all write file directives to the cloud-config,
 // if there are any
 func writeWriteFiles(buf *bytes.Buffer, data *schema.ResourceData) error {
-	writeDirectiveKey := func(d string) {
-		buf.WriteString(fmt.Sprintf("\t\t%v\n", d))
+	writeDirectiveKey := func(k string, v string) {
+		buf.WriteString(fmt.Sprintf("\t\t%s: %v\n", k, v))
 	}
 
 	writeFilesVal, hasWriteFiles := data.GetOk("write_file")
@@ -383,20 +378,20 @@ func writeWriteFiles(buf *bytes.Buffer, data *schema.ResourceData) error {
 		}
 
 		if p, ok := rawVal["permissions"]; ok && p.(string) != "" {
-			writeDirectiveKey(fmt.Sprintf("permissions: %s", p.(string)))
+			writeDirectiveKey("permissions", p.(string))
 		}
 
 		if p, ok := rawVal["owner"]; ok && p.(string) != "" {
-			writeDirectiveKey(fmt.Sprintf("owner: %s", p.(string)))
+			writeDirectiveKey("owner", p.(string))
 		}
 
 		if p, ok := rawVal["encoding"]; ok && p.(string) != "" {
-			writeDirectiveKey(fmt.Sprintf("encoding: %s", p.(string)))
+			writeDirectiveKey("encoding", p.(string))
 		}
 
 		if p, ok := rawVal["content"]; ok && p.(string) != "" {
 			cntnt := p.(string)
-			writeDirectiveKey("content: |")
+			writeDirectiveKey("content", "|")
 			buf.WriteString(indentString(3, &cntnt))
 		}
 	}
@@ -471,7 +466,7 @@ func indentString(indentLvl int, str *string) string {
 	for sc.Scan() {
 		line := sc.Text()
 
-		// if our line consists only of "\n" (in which case the given line is empty) then don't indent it
+		// if our line consists only of "\n" (in which case the given `line` value is empty) then don't indent it
 		if len(line) == 0 {
 			buf.WriteString("\n")
 		} else {
@@ -484,7 +479,7 @@ func indentString(indentLvl int, str *string) string {
 
 // CoreOS Key schemas
 
-// etcdSchema maps to coreos: etcd
+// etcdSchema maps to coreos.etcd.*
 var etcdSchema = &schema.Schema{
 	Type:       schema.TypeMap,
 	Optional:   true,
@@ -520,7 +515,7 @@ var etcdSchema = &schema.Schema{
 	},
 }
 
-// etcd2Schema maps to coreos: etcd2
+// etcd2Schema maps to coreos.etcd2.*
 var etcd2Schema = &schema.Schema{
 	Type:     schema.TypeMap,
 	Optional: true,
@@ -571,7 +566,7 @@ var etcd2Schema = &schema.Schema{
 	},
 }
 
-// fleetSchema maps to coreos: fleet
+// fleetSchema maps to coreos.fleet.*
 var fleetSchema = &schema.Schema{
 	Type:     schema.TypeMap,
 	Optional: true,
@@ -591,7 +586,7 @@ var fleetSchema = &schema.Schema{
 	},
 }
 
-// flannelSchema maps to coreos: flannel
+// flannelSchema maps to coreos.flannel.*
 var flannelSchema = &schema.Schema{
 	Type:     schema.TypeMap,
 	Optional: true,
@@ -610,7 +605,7 @@ var flannelSchema = &schema.Schema{
 	},
 }
 
-// locksmithSchema maps to coreos: locksmith
+// locksmithSchema maps to coreos.locksmith.*
 var locksmithSchema = &schema.Schema{
 	Type:     schema.TypeMap,
 	Optional: true,
@@ -627,7 +622,7 @@ var locksmithSchema = &schema.Schema{
 	},
 }
 
-// updateSchema maps to coreos: update
+// updateSchema maps to coreos.update.*
 var updateSchema = &schema.Schema{
 	Type:     schema.TypeMap,
 	Optional: true,
@@ -651,7 +646,7 @@ var updateSchema = &schema.Schema{
 	},
 }
 
-// userSchema maps to top level user values
+// userSchema maps to top level users.*
 var userSchema = &schema.Schema{
 	Type:     schema.TypeList,
 	Optional: true,
@@ -684,7 +679,7 @@ var userSchema = &schema.Schema{
 	},
 }
 
-// systemdUnitSchema maps to the coreos: unit key
+// systemdUnitSchema maps to coreos.units.*
 var systemdUnitSchema = &schema.Schema{
 	Type:     schema.TypeList,
 	Optional: true,
@@ -710,7 +705,7 @@ var systemdUnitSchema = &schema.Schema{
 	},
 }
 
-// writeFileSchema maps to the write_files: key
+// writeFileSchema maps to write_files.*
 var writeFileSchema = &schema.Schema{
 	Type:     schema.TypeList,
 	Optional: true,
@@ -724,8 +719,6 @@ var writeFileSchema = &schema.Schema{
 		},
 	},
 }
-
-// Validation functions
 
 // etcHostsValidation runs validation on the cloud-config's `manage_etc_hosts` key,
 // currently CoreOS only supports a value of "localhost", so throw a warning when any other
