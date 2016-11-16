@@ -412,17 +412,37 @@ func indentString(indentLvl int, str *string) string {
 // CoreOS Key schemas
 
 // etcdSchema maps to coreos: etcd
-// TODO: add remaining configuration options
 var etcdSchema = &schema.Schema{
 	Type:       schema.TypeMap,
 	Optional:   true,
 	Deprecated: "The etcd block has been deprecated by CoreOS in favor of etcd2",
 	Elem: &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			"name":      &schema.Schema{Type: schema.TypeString, Required: true},
-			"discovery": &schema.Schema{Type: schema.TypeString, Optional: true},
-			"addr":      &schema.Schema{Type: schema.TypeString, Optional: true},
-			"peer_addr": &schema.Schema{Type: schema.TypeString, Optional: true},
+			"addr":                    &schema.Schema{Type: schema.TypeString, Optional: true},
+			"discovery":               &schema.Schema{Type: schema.TypeString, Optional: true},
+			"http_read_timeout":       &schema.Schema{Type: schema.TypeInt, Optional: true},
+			"http_write_timeout":      &schema.Schema{Type: schema.TypeInt, Optional: true},
+			"bind_addr":               &schema.Schema{Type: schema.TypeString, Optional: true},
+			"peers":                   &schema.Schema{Type: schema.TypeString, Optional: true},
+			"ca_file":                 &schema.Schema{Type: schema.TypeString, Optional: true},
+			"cert_file":               &schema.Schema{Type: schema.TypeString, Optional: true},
+			"key_file":                &schema.Schema{Type: schema.TypeString, Optional: true},
+			"cors":                    &schema.Schema{Type: schema.TypeString, Optional: true},
+			"data_dir":                &schema.Schema{Type: schema.TypeString, Optional: true},
+			"max_result_buffer":       &schema.Schema{Type: schema.TypeInt, Optional: true},
+			"max_retry_attempts":      &schema.Schema{Type: schema.TypeInt, Optional: true},
+			"peer_addr":               &schema.Schema{Type: schema.TypeString, Optional: true},
+			"peer_bind_addr":          &schema.Schema{Type: schema.TypeString, Optional: true},
+			"peer_ca_file":            &schema.Schema{Type: schema.TypeString, Optional: true},
+			"peer_cert_file":          &schema.Schema{Type: schema.TypeString, Optional: true},
+			"peer_key_file":           &schema.Schema{Type: schema.TypeString, Optional: true},
+			"peer_election_timeout":   &schema.Schema{Type: schema.TypeInt, Optional: true},
+			"peer_heartbeat_interval": &schema.Schema{Type: schema.TypeInt, Optional: true},
+			"snapshot":                &schema.Schema{Type: schema.TypeBool, Optional: true},
+			"cluster_active_size":     &schema.Schema{Type: schema.TypeInt, Optional: true},
+			"cluster_remove_delay":    &schema.Schema{Type: schema.TypeInt, Optional: true},
+			"cluster_sync_interval":   &schema.Schema{Type: schema.TypeInt, Optional: true},
+			"name":                    &schema.Schema{Type: schema.TypeString, Required: true},
 		},
 	},
 }
