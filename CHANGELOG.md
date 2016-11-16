@@ -1,4 +1,33 @@
-## 0.8.0-beta2 (unreleased)
+## 0.8.0-rc1 (unreleased)
+
+BACKWARDS INCOMPATIBILITIES / NOTES:
+
+ * The chef provider now accepts `key_material` as an alternative to `private_key_pem`. `private_key_pem` will be deprecated in a future release
+
+FEATURES:
+
+
+IMPROVEMENTS:
+ * provider/chef: Migrate Chef to use KEY_MATERIAL rather than using a Pem file [GH-10105]
+
+
+BUG FIXES:
+
+
+
+## 0.8.0-beta2 (November 16, 2016)
+
+BASED ON: 0.7.11 (includes any changes up to that point as well)
+
+**Please read prior beta notes, as those are also included. The 0.8 changes
+will be coalesced for a 0.8 final, but will remain separate for the pre-release
+period.**
+
+BACKWARDS INCOMPATIBILITIES / NOTES:
+
+ * Math operators now follow the standard order of operations: *, /, % followed
+   by +, -. See the updated interpolation docs for more information. You can
+   continue to force ordering with parentheses.
 
 FEATURES:
 
@@ -13,6 +42,8 @@ FEATURES:
    [GH-10072]
 
 ## 0.8.0-beta1 (November 11, 2016)
+
+BASED ON: 0.7.10 (includes any changes up to that point as well)
 
 BACKWARDS INCOMPATIBILITIES / NOTES:
 
@@ -48,26 +79,40 @@ BUG FIXES:
   * core: Maps in outputs with computed values are no longer removed. ([#9549](https://github.com/hashicorp/terraform/issues/9549))
   * command/fmt: Multiline comments aren't indented every fmt. ([#6524](https://github.com/hashicorp/terraform/issues/6524))
 
-## 0.7.11 (Unreleased)
+## 0.7.12 (Unreleased)
+
+BUG FIXES:
+
+  * provider/aws: Fixed issue with `enable_dns_support` on creation in `aws_vpc` [GH-10171]
+
+## 0.7.11 (November 15, 2016)
 
 FEATURES:
 
 IMPROVEMENTS:
+
  * provider/aws: Expose RDS DB Instance HostedZoneId attribute ([#10000](https://github.com/hashicorp/terraform/issues/10000))
  * provider/aws: Ignore AWS internal tags ([#7454](https://github.com/hashicorp/terraform/issues/7454))
- * provider/aws: Exposed aws_iam_role create_date attribute [GH-10091]
- * provider/aws: Added aws_api_gateway_api_key created_date & last_updated_date attributes [GH-9530]
- * provider/aws: Added aws_api_gateway_rest_api created_date attribute [GH-9532]
- * provider/aws: Exposed aws_api_gateway_deployment.created_date attribute [GH-9534]
+ * provider/aws: Exposed aws_iam_role create_date attribute ([#10091](https://github.com/hashicorp/terraform/issues/10091))
+ * provider/aws: Added aws_api_gateway_api_key created_date & last_updated_date attributes ([#9530](https://github.com/hashicorp/terraform/issues/9530))
+ * provider/aws: Added aws_api_gateway_rest_api created_date attribute ([#9532](https://github.com/hashicorp/terraform/issues/9532))
+ * provider/aws: Exposed aws_api_gateway_deployment.created_date attribute ([#9534](https://github.com/hashicorp/terraform/issues/9534))
+ * provider/aws: Added `retry_duraction` to `redshift_configuration` in `kinesis_firehose_delivery_stream` ([#10113](https://github.com/hashicorp/terraform/issues/10113))
  * provider/azurerm: allow updating load balancer sub-resources ([#10016](https://github.com/hashicorp/terraform/issues/10016))
  * provider/openstack: Instance `user_data` will now detect if input is already Base64-encode ([#9966](https://github.com/hashicorp/terraform/issues/9966))
 
 BUG FIXES:
+
+ * core: Fix diff mismatch error on "Destroy: true to false" scenarios. ([#10139](https://github.com/hashicorp/terraform/issues/10139))
+ * core: New destroy graph `-target` includes dependencies. ([#10036](https://github.com/hashicorp/terraform/issues/10036))
+ * core: New destroy graph creates proper edges through module outputs ([#10068](https://github.com/hashicorp/terraform/issues/10068))
+ * core: Fix shadow error when using uuid() ([#10106](https://github.com/hashicorp/terraform/issues/10106))
+ * core: Fix an issue where applies with data sources could hang ([#10134](https://github.com/hashicorp/terraform/issues/10134))
+ * core: Fix plan operation diff mismatch for computed keys in slices ([#10118](https://github.com/hashicorp/terraform/issues/10118))
  * provider/aws: fix the validation of aws_redshift_cluster database_name ([#10019](https://github.com/hashicorp/terraform/issues/10019))
  * provider/aws: Fix panic in aws_acm_certificate datasource ([#10051](https://github.com/hashicorp/terraform/issues/10051))
- * provider/aws: increase aws_lambda_function timeout [GH-10116]
- * provider/aws: Fixed ES buffering_interval option in `kinesis_firehose_delivery_stream` [GH-10112]
-
+ * provider/aws: increase aws_lambda_function timeout ([#10116](https://github.com/hashicorp/terraform/issues/10116))
+ * provider/aws: Fixed ES buffering_interval option in `kinesis_firehose_delivery_stream` ([#10112](https://github.com/hashicorp/terraform/issues/10112))
 
 ## 0.7.10 (November 9, 2016)
 
