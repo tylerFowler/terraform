@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -138,10 +139,19 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 		return "", writeErr
 	}
 
+	cloudConfig := cloudinitBuf.String()
+
+	// if we've written nothing to the `coreos:` key we need to remove it from the string
+	if matches, _ := regexp.MatchString("coreos:\n\t", cloudConfig); !matches {
+		fmt.Println("=== Detected an empty coreos line, removing")
+		cloudConfig = strings.Replace(cloudConfig, "coreos:\n", "", 1)
+		fmt.Printf("=== Cloud config is now: %s\n", cloudConfig)
+	}
+
 	// replace all tabs with soft spaces since YAML doesn't like tabs
 	// TODO: eventually want to do this earlier in the process so that we can avoid
 	// changing the content of user scripts and such
-	return strings.Replace(cloudinitBuf.String(), "\t", "  ", -1), nil
+	return strings.Replace(cloudConfig, "\t", "  ", -1), nil
 }
 
 // writeCoreosValues writes the data at the CoreOS native fields wherever
@@ -437,7 +447,6 @@ func writeUsers(buf *bytes.Buffer, data *schema.ResourceData) error {
 			// TODO: for some of these boolean values, doing true *or* false will change the behavior,
 			// so we need a way to "unset" boolean values that user did not explicitly specify
 			case schema.TypeBool:
-				fmt.Printf("=== Got a bool: %v", userVal)
 				if userVal.(bool) != false {
 					writeUserKey(cloudinitKey, fmt.Sprintf("%t", userVal.(bool)))
 				}
