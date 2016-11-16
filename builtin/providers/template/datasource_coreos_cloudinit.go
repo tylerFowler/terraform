@@ -418,6 +418,7 @@ var etcdSchema = &schema.Schema{
 	Deprecated: "The etcd block has been deprecated by CoreOS in favor of etcd2",
 	Elem: &schema.Resource{
 		Schema: map[string]*schema.Schema{
+			"name":                    &schema.Schema{Type: schema.TypeString, Required: true},
 			"addr":                    &schema.Schema{Type: schema.TypeString, Optional: true},
 			"discovery":               &schema.Schema{Type: schema.TypeString, Optional: true},
 			"http_read_timeout":       &schema.Schema{Type: schema.TypeInt, Optional: true},
@@ -442,7 +443,6 @@ var etcdSchema = &schema.Schema{
 			"cluster_active_size":     &schema.Schema{Type: schema.TypeInt, Optional: true},
 			"cluster_remove_delay":    &schema.Schema{Type: schema.TypeInt, Optional: true},
 			"cluster_sync_interval":   &schema.Schema{Type: schema.TypeInt, Optional: true},
-			"name":                    &schema.Schema{Type: schema.TypeString, Required: true},
 		},
 	},
 }
