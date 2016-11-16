@@ -218,9 +218,14 @@ func writeCoreosDirective(
 		// ints are parsed as strings w/o quotes
 		case schema.TypeInt:
 			writeKey(cloudinitKey, fmt.Sprintf("%s", val.(string)))
-		// bools are written out as true or false
+		// bools are written out as true or false, and apparently are given as a string
+		// containing "0" for false and "1" for true presumably because we're using a schema.TypeMap for these
 		case schema.TypeBool:
-			writeKey(cloudinitKey, fmt.Sprintf("%t", val.(bool)))
+			if val.(string) == "0" {
+				writeKey(cloudinitKey, "false")
+			} else if val.(string) == "1" {
+				writeKey(cloudinitKey, "true")
+			}
 		// lists are joined together as comma separated strings
 		case schema.TypeList:
 			writeKey(cloudinitKey, strings.Join(val.([]string), ","))
@@ -432,6 +437,7 @@ func writeUsers(buf *bytes.Buffer, data *schema.ResourceData) error {
 			// TODO: for some of these boolean values, doing true *or* false will change the behavior,
 			// so we need a way to "unset" boolean values that user did not explicitly specify
 			case schema.TypeBool:
+				fmt.Printf("=== Got a bool: %v", userVal)
 				if userVal.(bool) != false {
 					writeUserKey(cloudinitKey, fmt.Sprintf("%t", userVal.(bool)))
 				}
