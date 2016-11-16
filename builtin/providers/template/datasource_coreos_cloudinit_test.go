@@ -96,6 +96,15 @@ EOF
 			}`,
 			"#cloud-config\ncoreos:\nwrite_files:\n  - path: \"~/hello_world\"\n    permissions: 0644\n    owner: core:core\n    encoding: utf8\n    content: |\n      hello world\n",
 		},
+		{ // shouldn't write write_file vals with no values
+			`data "template_coreos_cloudinit" "test" {
+				write_file {
+					path = "~/hello_world"
+					content = "hello world!"
+				}
+			}`,
+			"#cloud-config\ncoreos:\nwrite_files:\n  - path: \"~/hello_world\"\n    content: |\n      hello world!\n",
+		},
 		{ // use_shebang
 			`data "template_coreos_cloudinit" "test" {
 				use_shebang = true
@@ -138,6 +147,25 @@ EOF
 				}
 			}`,
 			"#cloud-config\ncoreos:\n  etcd:\n    name: \"node001\"\n  etcd2:\n    initial-advertise-peer-urls: \"http://$private_ipv4:2380\"\n  fleet:\n    engine-reconcile-interval: 30\n  flannel:\n    etcd-endpoints: \"https://127.0.0.1:2379,https://$private_ipv4:2379\"\n  locksmith:\n    endpoint: \"https://etcd.example.com:2379\"\n  update:\n    reboot-strategy: \"best-effort\"\n",
+		},
+		{ // user blocks, again can't test more than one prop per block since order is indeterminant
+			`data "template_coreos_cloudinit" "test" {
+				user {
+					name = "core-user"
+					no_create_home = true
+				}
+
+				user {
+					name = "other-user"
+					groups = [ "web", "root" ]
+				}
+
+				user {
+					name = "another-one"
+					passwd = "ahashedpwd"
+				}
+			}`,
+			"#cloud-config\ncoreos:\nusers:\n  - name: \"core-user\"\n    no-create-home: true\n  - name: \"other-user\"\n    groups: \n      - \"web\"\n      - \"root\"\n  - name: \"another-one\"\n    passwd: ahashedpwd\n",
 		},
 	}
 
