@@ -1,5 +1,7 @@
 package template
 
+// TODO: test error cases in the render fn
+
 import (
 	"testing"
 
@@ -14,7 +16,7 @@ func TestCoreosCloudinitRender(t *testing.T) {
 	}{
 		{ // empty block case
 			`data "template_coreos_cloudinit" "test" {}`,
-			"#cloud-config\ncoreos:\n",
+			"#cloud-config\n",
 		},
 		{ // test systemd unit output
 			`data "template_coreos_cloudinit" "test" {
@@ -94,7 +96,7 @@ EOF
 					content = "hello world"
 				}
 			}`,
-			"#cloud-config\ncoreos:\nwrite_files:\n  - path: \"~/hello_world\"\n    permissions: 0644\n    owner: core:core\n    encoding: utf8\n    content: |\n      hello world\n",
+			"#cloud-config\nwrite_files:\n  - path: \"~/hello_world\"\n    permissions: 0644\n    owner: core:core\n    encoding: utf8\n    content: |\n      hello world\n",
 		},
 		{ // shouldn't write write_file vals with no values
 			`data "template_coreos_cloudinit" "test" {
@@ -103,13 +105,13 @@ EOF
 					content = "hello world!"
 				}
 			}`,
-			"#cloud-config\ncoreos:\nwrite_files:\n  - path: \"~/hello_world\"\n    content: |\n      hello world!\n",
+			"#cloud-config\nwrite_files:\n  - path: \"~/hello_world\"\n    content: |\n      hello world!\n",
 		},
 		{ // use_shebang
 			`data "template_coreos_cloudinit" "test" {
 				use_shebang = true
 			}`,
-			"#!cloud-config\ncoreos:\n",
+			"#!cloud-config\n",
 		},
 		{ // top level values (hostname, manage_etc_hosts, ssh_authorized_keys)
 			`data "template_coreos_cloudinit" "test" {
@@ -118,7 +120,7 @@ EOF
 				ssh_authorized_keys = [ "ssh-rsa apublickey", "ssh-rsa anotherpublickey" ]
 				manage_etc_hosts = "127.0.0.1"
 			}`,
-			"#cloud-config\nhostname: some-host\nssh_authorized_keys:\n  - \"ssh-rsa apublickey\"\n  - \"ssh-rsa anotherpublickey\"\nmanage_etc_hosts: 127.0.0.1\ncoreos:\n",
+			"#cloud-config\nhostname: some-host\nssh_authorized_keys:\n  - \"ssh-rsa apublickey\"\n  - \"ssh-rsa anotherpublickey\"\nmanage_etc_hosts: 127.0.0.1\n",
 		},
 		{ // coreos.* values (fleet, etcd2, etc...), can only do one key per block since the order is indeterminant
 			`data "template_coreos_cloudinit" "test" {
@@ -165,7 +167,7 @@ EOF
 					passwd = "ahashedpwd"
 				}
 			}`,
-			"#cloud-config\ncoreos:\nusers:\n  - name: \"core-user\"\n    no-create-home: true\n  - name: \"other-user\"\n    groups: \n      - \"web\"\n      - \"root\"\n  - name: \"another-one\"\n    passwd: ahashedpwd\n",
+			"#cloud-config\nusers:\n  - name: \"core-user\"\n    no-create-home: true\n  - name: \"other-user\"\n    groups: \n      - \"web\"\n      - \"root\"\n  - name: \"another-one\"\n    passwd: ahashedpwd\n",
 		},
 	}
 
