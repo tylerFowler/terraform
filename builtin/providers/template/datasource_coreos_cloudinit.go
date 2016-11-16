@@ -2,7 +2,6 @@ package template
 
 // TODO:
 // - add options for gzipping & encoding in base64
-// - if `coreos: ` ends up being empty we need to not write it (or write something ineffectual to it)
 
 import (
 	"bufio"
@@ -143,9 +142,7 @@ func renderCloudinit(data *schema.ResourceData) (string, error) {
 
 	// if we've written nothing to the `coreos:` key we need to remove it from the string
 	if matches, _ := regexp.MatchString("coreos:\n\t", cloudConfig); !matches {
-		fmt.Println("=== Detected an empty coreos line, removing")
 		cloudConfig = strings.Replace(cloudConfig, "coreos:\n", "", 1)
-		fmt.Printf("=== Cloud config is now: %s\n", cloudConfig)
 	}
 
 	// replace all tabs with soft spaces since YAML doesn't like tabs
