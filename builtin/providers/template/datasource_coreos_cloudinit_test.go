@@ -127,7 +127,7 @@ EOF
 				}
 
 				etcd2 {
-					initial_advertise_peer_urls = "http://$private_ipv4:2380"
+					peer_client_cert_auth = true
 				}
 
 				fleet {
@@ -146,7 +146,7 @@ EOF
 					reboot_strategy = "best-effort"
 				}
 			}`,
-			"#cloud-config\ncoreos:\n  etcd:\n    name: \"node001\"\n  etcd2:\n    initial-advertise-peer-urls: \"http://$private_ipv4:2380\"\n  fleet:\n    engine-reconcile-interval: 30\n  flannel:\n    etcd-endpoints: \"https://127.0.0.1:2379,https://$private_ipv4:2379\"\n  locksmith:\n    endpoint: \"https://etcd.example.com:2379\"\n  update:\n    reboot-strategy: \"best-effort\"\n",
+			"#cloud-config\ncoreos:\n  etcd:\n    name: \"node001\"\n  etcd2:\n    peer-client-cert-auth: true\n  fleet:\n    engine-reconcile-interval: 30\n  flannel:\n    etcd-endpoints: \"https://127.0.0.1:2379,https://$private_ipv4:2379\"\n  locksmith:\n    endpoint: \"https://etcd.example.com:2379\"\n  update:\n    reboot-strategy: \"best-effort\"\n",
 		},
 		{ // user blocks, again can't test more than one prop per block since order is indeterminant
 			`data "template_coreos_cloudinit" "test" {
