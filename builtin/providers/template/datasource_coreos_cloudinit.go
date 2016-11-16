@@ -1,8 +1,5 @@
 package template
 
-// TODO:
-// - add options for gzipping & encoding in base64
-
 import (
 	"bufio"
 	"bytes"
