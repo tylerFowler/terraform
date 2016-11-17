@@ -597,7 +597,7 @@ var flannelSchema = &schema.Schema{
 			"etcd_certfile":  &schema.Schema{Type: schema.TypeString, Optional: true},
 			"etcd_keyfile":   &schema.Schema{Type: schema.TypeString, Optional: true},
 			"etcd_prefix":    &schema.Schema{Type: schema.TypeString, Optional: true},
-			"ip_masq":        &schema.Schema{Type: schema.TypeString, Optional: true},
+			"ip_masq":        &schema.Schema{Type: schema.TypeBool, Optional: true},
 			"subnet_file":    &schema.Schema{Type: schema.TypeString, Optional: true},
 			"interface":      &schema.Schema{Type: schema.TypeString, Optional: true},
 			"public_ip":      &schema.Schema{Type: schema.TypeString, Optional: true},
