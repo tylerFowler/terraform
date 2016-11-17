@@ -617,7 +617,7 @@ var locksmithSchema = &schema.Schema{
 			"etcd_keyfile":  &schema.Schema{Type: schema.TypeString, Optional: true},
 			"group":         &schema.Schema{Type: schema.TypeString, Optional: true},
 			"window_start":  &schema.Schema{Type: schema.TypeString, Optional: true},
-			"window_length": &schema.Schema{Type: schema.TypeString, Optional: true},
+			"window_length": &schema.Schema{Type: schema.TypeInt, Optional: true},
 		},
 	},
 }
