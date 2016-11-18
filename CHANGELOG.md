@@ -5,15 +5,24 @@ BACKWARDS INCOMPATIBILITIES / NOTES:
  * The chef provider now accepts `key_material` as an alternative to `private_key_pem`. `private_key_pem` will be deprecated in a future release
 
 FEATURES:
+ * core: allow outputs to have descriptions [GH-9722]
+ * state/azure: support passing of lease ID when writing storage blob [GH-10115]
 
 
 IMPROVEMENTS:
- * provider/chef: Migrate Chef to use KEY_MATERIAL rather than using a Pem file [GH-10105]
 
+ * provider/chef: Migrate Chef to use KEY_MATERIAL rather than using a Pem file [GH-10105]
+ * provider/google: Add Service Accounts resource [GH-9946]
 
 BUG FIXES:
 
 
+
+PLUGIN CHANGES:
+
+ * The protocol version has been incremented, requiring all plugins for
+   0.8 to be built with 0.8 sources (or newer). This should only require
+   a simple recompile for compatibility.
 
 ## 0.8.0-beta2 (November 16, 2016)
 
@@ -81,9 +90,22 @@ BUG FIXES:
 
 ## 0.7.12 (Unreleased)
 
+BACKWARDS INCOMPATIBILITIES / NOTES:
+
+ * provider/cloudstack: `cloudstack_port_forward` has now deprecated `network_id` [GH-10204]
+
+FEATURES:
+ * *New Data Source:* `aws_alb_listener` [GH-10181]
+ * *New Resource:* `github_label` [GH-10213]
+
+IMPROVEMENTS:
+ * provider/aws: Add name_prefix to aws_iam_policy [GH-10178]
+
 BUG FIXES:
 
-  * provider/aws: Fixed issue with `enable_dns_support` on creation in `aws_vpc` [GH-10171]
+ * provider/aws: Fixed issue with `enable_dns_support` on creation in `aws_vpc` [GH-10171]
+ * provider/aws: Add CertificateNotFound retry waiter to aws_alb_listener [GH-10180]
+ * provider/scaleway: improve volume attachment [GH-10084]
 
 ## 0.7.11 (November 15, 2016)
 
@@ -97,7 +119,7 @@ IMPROVEMENTS:
  * provider/aws: Added aws_api_gateway_api_key created_date & last_updated_date attributes ([#9530](https://github.com/hashicorp/terraform/issues/9530))
  * provider/aws: Added aws_api_gateway_rest_api created_date attribute ([#9532](https://github.com/hashicorp/terraform/issues/9532))
  * provider/aws: Exposed aws_api_gateway_deployment.created_date attribute ([#9534](https://github.com/hashicorp/terraform/issues/9534))
- * provider/aws: Added `retry_duraction` to `redshift_configuration` in `kinesis_firehose_delivery_stream` ([#10113](https://github.com/hashicorp/terraform/issues/10113))
+ * provider/aws: Added `retry_duration` to `redshift_configuration` in `kinesis_firehose_delivery_stream` ([#10113](https://github.com/hashicorp/terraform/issues/10113))
  * provider/azurerm: allow updating load balancer sub-resources ([#10016](https://github.com/hashicorp/terraform/issues/10016))
  * provider/openstack: Instance `user_data` will now detect if input is already Base64-encode ([#9966](https://github.com/hashicorp/terraform/issues/9966))
 
